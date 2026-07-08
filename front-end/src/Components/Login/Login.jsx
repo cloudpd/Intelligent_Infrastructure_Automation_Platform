@@ -42,9 +42,9 @@ export default function Login() {
 
                     if (data.success == true) {
                         setsucMsg('welcome back');
-                        sessionStorage.setItem('token', data.token);
-                        localStorage.setItem('token', data.token);
-                        setToken(data.token);
+                        sessionStorage.setItem('token', data.accessToken);
+                        localStorage.setItem('token', data.accessToken);
+                        setToken(data.accessToken);
 
                         setTimeout(() => {
                             navigate('/home');
