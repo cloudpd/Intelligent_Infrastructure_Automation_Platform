@@ -89,7 +89,7 @@ export default function Login() {
                 {forgot ? <Link to={'/account-recovery'} className='nav-link'><span className='d-block text-center fw-bold text-danger '> FORGOT YOUR PASSWORD ? </span></Link> : null}
 
                 <div className='d-flex justify-content-end'>
-                    <button type='submit' disabled={myformik.isValid == false || myformik.dirty == false ? true : false} className='btn bg-dark my-3 text-white'>
+                    <button type='submit' disabled={myformik.isValid == false || myformik.dirty == false ? true : false} className='btn bg-main my-3 text-white'>
                         {spin ? <i className='fa fa-spin fa-spinner'></i> : 'Login'}
                     </button>
                 </div>

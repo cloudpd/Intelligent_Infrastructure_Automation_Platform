@@ -42,23 +42,25 @@ export default function Navbar() {
 
                                     <li className="nav-item">
                                         <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/home">Home <i className="fa-solid fa-house"></i></NavLink>
+                                            {/* <NavLink className="nav-link" to="/home">Home <i className="fa-solid fa-house"></i></NavLink> */}
+                                            <NavLink className="nav-link" to="/home">Home </NavLink>
+
                                         </div>
                                     </li>
                                     <li className="nav-item">
                                         <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/products">Products</NavLink>
+                                            <NavLink className="nav-link" to="/projects">Projects</NavLink>
                                         </div>
 
                                     </li>
 
                                     <li className="nav-item">
                                         <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/categories">Categories</NavLink>
+                                            <NavLink className="nav-link" to="/services">Services</NavLink>
                                         </div>
                                     </li>
 
-
+{/* 
                                     <li className="nav-item">
                                         <div className='d-flex justify-content-center'>
                                             <NavLink className="nav-link" to="/brands">Brands</NavLink>
@@ -75,21 +77,21 @@ export default function Navbar() {
                                         <div className='d-flex justify-content-center'>
                                             <NavLink className="nav-link" to="/wishlist">WishList <i className="fa-solid fa-heart"></i></NavLink>
                                         </div>
-                                    </li>
+                                    </li>  */}
 
-
+{/* 
                                     <li className="nav-item mx-3">
 
                                         <div className='d-flex justify-content-center'>
                                             <NavLink className="nav-link  position-relative" to="/cart"><i className="fa-solid fa-cart-shopping fa-shake fa-2xl text-main" style={{ color: '' }}></i>
 
                                                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-main">
-                                                    {/* {cartNumber} */}
+                                                    {cartNumber}
                                                     <span className="visually-hidden">unread messages</span>
                                                 </span>
                                             </NavLink>
                                         </div>
-                                    </li>
+                                    </li>  */}
 
 
 
