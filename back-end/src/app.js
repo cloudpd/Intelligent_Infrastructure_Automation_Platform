@@ -4,8 +4,12 @@ const projectsRoutes = require('./modules/projects/projects.routes');
 const servicesRoutes = require('./modules/service/service.routes');
 const errorHandler = require('./core/middlewares/errorHandler');
 
+const cors = require("cors") ;
 const app = express();
 
+app.use(cors({
+  origin: '*'
+}));
 app.use(express.json());
 
 app.use('/auth', authRoutes);
