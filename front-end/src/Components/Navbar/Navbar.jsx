@@ -1,94 +1,85 @@
-import React, { useContext } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import navImg from '../../finalProject assets/imgs/freshcart-logo.svg'
-import { authContext } from '../../Context/AuthContext.jsx'
+import React, { useContext } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { authContext } from "../../Context/AuthContext";
+import "./Navbar.css";
 
 export default function Navbar() {
+  const { token, setToken } = useContext(authContext);
+  const navigate = useNavigate();
 
-    let { token, setToken } = useContext(authContext)
-    let navigate = useNavigate()
+  function Signout() {
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    navigate("/login");
+  }
 
-    function Signout() {
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
-        setToken(null);
-        navigate('/login');
-    }
+  return (
+    <header className="dh-navbar">
+      <div className="dh-navbar-container">
 
-    return (
-        <>
-            <nav className="navbar navbar-expand-lg bg-body-tertiary">
-                <div className="container-fluid px-5  py-3">
-                    <NavLink className="navbar-brand" to="/home"><h3>DeployHub</h3></NavLink>
-                    <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                        <span className="navbar-toggler-icon" />
-                    </button>
-                    <div className="collapse navbar-collapse" id="navbarSupportedContent">
-                        {token ?
-                            <>
-                                <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+        {/* Left */}
 
-                                    <li className="nav-item">
-                                        <div className='d-flex justify-content-center'>
-                                            {/* <NavLink className="nav-link" to="/home">Home <i className="fa-solid fa-house"></i></NavLink> */}
-                                            <NavLink className="nav-link" to="/home">Home </NavLink>
+        <div className="dh-left">
 
-                                        </div>
-                                    </li>
-                                    <li className="nav-item">
-                                        <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/projects">Projects</NavLink>
-                                        </div>
+          <NavLink to="/home" className="dh-logo">
 
-                                    </li>
+            <div className="dh-logo-icon">
+              <i className="fa-solid fa-paper-plane"></i>
+            </div>
 
-                                    <li className="nav-item">
-                                        <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/services">Services</NavLink>
-                                        </div>
-                                    </li>
+            <span className="dh-text">DeployHub</span>
 
-                                </ul>
-                            </>
-                            : null}
+          </NavLink>
 
-                        <ul className="navbar-nav ms-auto mb-2  mb-lg-0">
+          {token && (
+            <nav className="dh-links">
 
-                            {token ?
-                                <>
-                                    <li className="nav-item ">
-                                        <div className='d-flex justify-content-center'>
+              <NavLink to="/home">Home</NavLink>
 
-                                            <NavLink className="nav-link" to="/profile">Profile <i className="fa-solid fa-user"></i></NavLink>
-                                        </div>
-                                    </li>
-                                    <li className="nav-item ">
-                                        <div className='d-flex justify-content-center'>
-                                            <span onClick={Signout} className="nav-link cursor-pointer" >Signout<i className="fa-solid fa-right-from-bracket"></i></span>
+              <NavLink to="/projects">Projects</NavLink>
 
-                                        </div>
-                                    </li>
-                                </>
-                                
-                                : <>
-                                    <li className="nav-item ">
-                                        <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/login">Login</NavLink>
-                                        </div>
-                                    </li>
-                                    <li className="nav-item ">
-                                        <div className='d-flex justify-content-center'>
-                                            <NavLink className="nav-link" to="/register">Register</NavLink>
-                                        </div>
-                                    </li>
-                                </>}
-                        </ul>
+              <NavLink to="/services">Services</NavLink>
 
-                    </div>
-                </div>
             </nav>
+          )}
+        </div>
+
+        {/* Right */}
+
+        <div className="dh-right">
+
+          {token ? (
+            <>
 
 
-        </>
-    )
+              <NavLink className="profile-link" to="/profile">
+                <div className="avatar">
+                  {JSON.parse(localStorage.getItem("user"))?.name[0].toUpperCase() || "U"}
+                </div>
+                <span className="dh-text">Profile</span>
+              </NavLink>
+
+              <button className="logout-btn" onClick={Signout}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink className="auth-link" to="/login">
+                Login
+              </NavLink>
+
+              <NavLink className="register-btn" to="/register">
+                Register
+              </NavLink>
+            </>
+          )}
+
+        </div>
+
+      </div>
+    </header>
+  );
 }

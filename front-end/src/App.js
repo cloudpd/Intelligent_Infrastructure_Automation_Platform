@@ -21,6 +21,7 @@ import { ToastContainer } from 'react-toastify';
 // import Allorders from './Components/Orders/Allorders';
 import Recovery from './Components/Login/Recovery';
 import Projects from './Components/Projects/Projects.jsx';
+import ProjectDetails from './Components/Projects/ProjectDetails.jsx';
 import Services from './Components/Services/Services.jsx';
 // import Wishlist from './Components/Wishlist/Wishlist';
 // import WishContextProvider from './Context/WishContext';
@@ -63,6 +64,12 @@ function App() {
               {/* <WishContextProvider> */}
                 <Projects />
               {/* </WishContextProvider> */}
+            </ProtectedRoute>
+        },
+        {
+          path: '/projects/:projectId', element:
+            <ProtectedRoute>
+              <ProjectDetails />
             </ProtectedRoute>
         },
         {

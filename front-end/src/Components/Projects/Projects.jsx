@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import './Projects.css'
+import AddNewProject from './AddNewProject'
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000'
-function getStatusMeta(rawStatus) {
-  const status = (rawStatus || '').toString().toUpperCase()
 
-  const map = {
-    LIVE: { statusClass: 'status-pill--live', badgeColor: '#22c55e' },
-    BUILDING: { statusClass: 'status-pill--building', badgeColor: '#f59e0b' },
-    FAILED: { statusClass: 'status-pill--failed', badgeColor: '#f87171' },
-  }
 
-  return {
-    status: status || 'UNKNOWN',
-    ...(map[status] || { statusClass: 'status-pill--unknown', badgeColor: '#94a3b8' }),
-  }
+function ProjectCard({project}) {
+  const id = project.id || project._id;
+  const title = project.title || project.name || 'Untitled project';
+  const description = project.description || project.body || '';
+  const date = project.date || project.updated_at || project.created_at || '';
+
+  return (
+    <Link key={id} to={`/projects/${id}`} className='project-card project-card--link'>
+      <div>
+        <div className='project-title'>{title}</div>
+        <p className='project-label'>{description}</p>
+      </div>
+    </Link>
+  );
 }
 
 export default function Projects() {
@@ -47,7 +52,8 @@ export default function Projects() {
       .then((data) => {
         // Accept either a raw array or { projects: [...] }
         const list = Array.isArray(data) ? data : (data.projects || [])
-        setProjects(list)
+        // add the projects to the list
+        setProjects(list);
       })
       .catch((err) => {
         console.error('Failed to fetch projects:', err)
@@ -71,39 +77,11 @@ export default function Projects() {
       </header>
 
       <div className='projects-grid'>
-        <article className='project-card project-card--new'>
-          <div>
-            <div className='project-title'>
-              <span className='plus-mark'>+</span>
-              New Project
-            </div>
-            <p className='project-label'>Deploy from a Git repository</p>
-          </div>
-        </article>
+        <AddNewProject onCreated={fetchProjects} />
 
         {!loading && !error && projects.map((project) => {
-          const title = project.title || project.name || 'Untitled project'
-          const description = project.description || ''
-          const date = project.date || project.updated_at || project.created_at || ''
-          const { status, statusClass, badgeColor } = getStatusMeta(project.status)
-
           return (
-            <article key={project.id || title} className='project-card'>
-              <div>
-                <div className='project-title'>{title}</div>
-                <p className='project-label'>{description}</p>
-              </div>
-              <div>
-                <div className={`status-pill ${statusClass}`}>{status}</div>
-                <div className='project-status'>
-                  <span className='project-stats'>
-                    <span className='status-dot' style={{ color: badgeColor }} />
-                    <span>{description.toLowerCase().includes('api') ? 'API service' : 'Service'}</span>
-                  </span>
-                  <span>{date}</span>
-                </div>
-              </div>
-            </article>
+            <ProjectCard key={project.id} project={project} />
           )
         })}
       </div>
