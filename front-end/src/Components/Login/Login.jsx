@@ -6,98 +6,119 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import * as Yup from 'yup'
 import { authContext } from '../../Context/AuthContext.jsx'
 
-
 export default function Login() {
-
-    let { setToken, token } = useContext(authContext);
-    let [errMsg, seterrMsg] = useState('');
-    let [sucMsg, setsucMsg] = useState('');
-    let [spin, setSpin] = useState(false);
-    let [forgot, setForgot] = useState(false);
-
+    const { setToken, token } = useContext(authContext);
+    const [errMsg, setErrMsg] = useState('');
+    const [sucMsg, setSucMsg] = useState('');
+    const [spin, setSpin] = useState(false);
+    const [forgot, setForgot] = useState(false);
 
     const navigate = useNavigate();
 
+    const validationSchema = Yup.object({
+        email: Yup.string().email('Invalid email').required('Email is required'),
+        password: Yup.string().matches(/^[a-zA-z0-9]{5,15}$/, 'Password must be 5-15 characters').required('Password is required'),
+    });
 
-    const validationSchema = Yup.object(
-        {
-            email: Yup.string().email('invalid email').required('Invalid Email'),
-            password: Yup.string().matches(/^[a-zA-z0-9]{5,15}$/).required('Password is Worng'),
+    const myformik = useFormik({
+        initialValues: { email: '', password: '' },
+        onSubmit: async (values) => {
+            try {
+                setSpin(true);
+                setErrMsg('');
+                const { data } = await axios.post(baseUrl + 'auth/login', values);
 
-        })
+                if (data.success === true) {
+                    setSucMsg('Welcome back');
+                    sessionStorage.setItem('token', data.accessToken);
+                    localStorage.setItem('token', data.accessToken);
+                    setToken(data.accessToken);
 
-
-
-
-    const myformik = useFormik(
-        {
-
-            initialValues: { email: '', password: '' },
-
-            onSubmit: async (values) => {
-                try {
-
-                    setSpin(true)
-                    let { data } = await axios.post(baseUrl + 'auth/login', values);
-
-                    if (data.success == true) {
-                        setsucMsg('welcome back');
-                        sessionStorage.setItem('token', data.accessToken);
-                        localStorage.setItem('token', data.accessToken);
-                        setToken(data.accessToken);
-
-                        setTimeout(() => {
-                            navigate('/home');
-
-                        }, 1500);
-                    }
-
-                } catch ({ response }) {
-                    seterrMsg(response.data.message);
-                    setSpin(false);
-                    setForgot(true);
-
+                    setTimeout(() => {
+                        navigate('/home');
+                    }, 1000);
                 }
-
-
-
-
-            },
-
-            validationSchema,
-
-        })
-
+            } catch ({ response }) {
+                setErrMsg(response?.data?.message || 'Login failed');
+                setSpin(false);
+                setForgot(true);
+            }
+        },
+        validationSchema,
+    });
 
     if (token) {
-
         return <Navigate to={'/home'} />
     }
 
     return (
+        <div className='auth-shell'>
 
-        <div className='d-flex align-items-center min-vh-100'>
-            <form onSubmit={myformik.handleSubmit} className="w-50 m-auto  ">
-                <h2>Login Now :</h2>
 
-                <input onBlur={myformik.handleBlur} onChange={myformik.handleChange} value={myformik.values.email} className='form-control my-3' type="email" name='email' placeholder='Enter your email' />
-                {myformik.errors.email && myformik.touched.email ? <div className="alert alert-danger">{myformik.errors.email}</div> : null}
+            <div className='auth-brand'>
+                <div className='auth-brand__mark'>D</div>
+                <span>DeployHub</span>
+            </div>
 
-                <input onBlur={myformik.handleBlur} onChange={myformik.handleChange} value={myformik.values.password} className='form-control my-3' type="password" name='password' placeholder='Enter your password' />
-                {myformik.errors.password && myformik.touched.password ? <div className="alert alert-danger">{myformik.errors.password}</div> : null}
+            <div className='auth-card'>
+                <h1>Welcome back</h1>
+                <p>Sign in to continue to DeployHub.</p>
 
-                {forgot ? <Link to={'/account-recovery'} className='nav-link'><span className='d-block text-center fw-bold text-danger '> FORGOT YOUR PASSWORD ? </span></Link> : null}
+                <form onSubmit={myformik.handleSubmit} className='auth-form'>
+                    <label className='auth-label'>
+                        Email
+                        <input
+                            onBlur={myformik.handleBlur}
+                            onChange={myformik.handleChange}
+                            value={myformik.values.email}
+                            className='auth-input'
+                            type='email'
+                            name='email'
+                            placeholder='Enter your email'
+                        />
+                    </label>
+                    {myformik.errors.email && myformik.touched.email ? <div className='auth-alert auth-alert--danger'>{myformik.errors.email}</div> : null}
 
-                <div className='d-flex justify-content-end'>
-                    <button type='submit' disabled={myformik.isValid == false || myformik.dirty == false ? true : false} className='btn bg-main my-3 text-white'>
-                        {spin ? <i className='fa fa-spin fa-spinner'></i> : 'Login'}
+                    <label className='auth-label'>
+                        Password
+                        <input
+                            onBlur={myformik.handleBlur}
+                            onChange={myformik.handleChange}
+                            value={myformik.values.password}
+                            className='auth-input'
+                            type='password'
+                            name='password'
+                            placeholder='Enter your password'
+                        />
+                    </label>
+                    {myformik.errors.password && myformik.touched.password ? <div className='auth-alert auth-alert--danger'>{myformik.errors.password}</div> : null}
+
+                    <div className='auth-meta'>
+                        <label className='auth-checkbox'>
+                            <input type='checkbox' />
+                            <span>Remember me</span>
+                        </label>
+                        {forgot ? (
+                            <Link to={'/account-recovery'} className='auth-link'>Forgot password?</Link>
+                        ) : null}
+                    </div>
+
+                    <button
+                        type='submit'
+                        disabled={myformik.isValid === false || myformik.dirty === false || spin}
+                        className='auth-btn auth-submit'
+                    >
+                        {spin ? <i className='fa fa-spin fa-spinner'></i> : 'Sign in'}
                     </button>
-                </div>
-                {errMsg ? <div className="alert alert-danger">{errMsg}</div> : null}
-                {sucMsg ? <div className='alert alert-success'>{sucMsg}</div> : null}
+                </form>
 
-            </form>
+                {errMsg ? <div className='auth-alert auth-alert--danger mt-3'>{errMsg}</div> : null}
+                {sucMsg ? <div className='auth-alert auth-alert--success mt-3'>{sucMsg}</div> : null}
+
+                <p className='auth-footer'>
+                    New here? <Link to={'/register'} className='auth-link'>Create an account</Link>
+                </p>
+            </div>
         </div>
-
     )
 }
