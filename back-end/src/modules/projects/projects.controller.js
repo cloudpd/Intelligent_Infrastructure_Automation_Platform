@@ -1,6 +1,20 @@
 const projectsService = require('./projects.service');
 
 
+async function getUserProjectsController(req, res, next) {
+  try {
+    const projects = await projectsService.getUserProjects(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      count: projects.length,
+      projects,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function createProjectController(req, res, next) {
   try {
     const { name, description } = req.body;

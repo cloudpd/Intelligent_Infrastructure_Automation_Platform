@@ -16,6 +16,7 @@ const router = express.Router();
 router.use(authenticate);
 
 
+router.get('/', getUserProjectsController);
 router.post('/create', validate(createProjectSchema), createProjectController);
 router.get('/list', getUserProjectsController);
 router.get('/get/:id', getProjectController);

@@ -3,6 +3,16 @@ const { User } = require('../auth/auth.model');
 const AppError = require('../../core/utils/AppError');
 
 
+async function getUserProjects(userId) {
+  const projects = await Project.findAll({
+    where: { owner_id: userId },
+    include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
+    order: [['createdAt', 'DESC']],
+  });
+
+  return projects;
+}
+
 async function createProject(userId, projectData) {
   const existingProject = await Project.findOne({
     where: { owner_id: userId, name: projectData.name },
