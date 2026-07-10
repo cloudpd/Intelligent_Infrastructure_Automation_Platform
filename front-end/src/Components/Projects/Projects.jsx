@@ -30,7 +30,14 @@ export default function Projects() {
     setLoading(true)
     setError(null)
 
-    fetch(API_URL)
+    const token = localStorage.getItem('token');
+
+    const url = `${API_URL}/projects/list`
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Request failed with status ${res.status}`)
@@ -114,11 +121,11 @@ export default function Projects() {
         </div>
       }
 
-      {!loading && !error && projects.length === 0 &&
+      {/* {!loading && !error && projects.length === 0 &&
         <div className='projects-state'>
           <p>No projects yet. Deploy your first project from a Git repository to see it here.</p>
         </div>
-      }
+      } */}
     </div>
   )
 }
