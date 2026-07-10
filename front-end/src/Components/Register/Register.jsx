@@ -2,76 +2,60 @@ import React, { useContext, useState } from 'react'
 import { useFormik } from 'formik';
 import axios from 'axios';
 import { baseUrl } from '../Shared/baseUrl';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { authContext } from '../../Context/AuthContext';
 import { toast } from 'react-toastify'
 
 export default function Register() {
+  const [errMsg, setErrMsg] = useState('');
+  const [sucMsg, setSucMsg] = useState('');
+  const [spin, setSpin] = useState(false);
+  const { token } = useContext(authContext);
+  const navigate = useNavigate();
 
-  let [errMsg, seterrMsg] = useState('');
-  let [sucMsg, setsucMsg] = useState('');
-  let [spin, setSpin] = useState(false);
-  let { token } = useContext(authContext);
-  let navigate = useNavigate();
-
-
-  let notify = () => {
-    toast.success('Registered Successfully', { position: 'top-center', theme: 'colored' })
+  const notify = () => {
+    toast.success('Registered successfully', { position: 'top-center', theme: 'colored' })
   }
 
-
   const myFormik = useFormik({
-
-    initialValues: { name: '', email: '', password: '', rePassword: ''},
-
+    initialValues: { name: '', email: '', password: '', rePassword: '' },
     onSubmit: async (values) => {
-
       setSpin(true)
+      setErrMsg('')
 
-      let { data } = await axios.post(baseUrl + 'auth/signup', values)
-
+      await axios.post(baseUrl + 'auth/signup', values)
         .then(() => {
           notify();
-          seterrMsg('');
-          setsucMsg('Registerd Successfully');
-
-          setTimeout(() => { navigate('/login'); }, 1500);
-
+          setSucMsg('Registered successfully');
+          setTimeout(() => { navigate('/login'); }, 1200);
         })
-
-        .catch(({ response }) => { seterrMsg(response.data.message); setSpin(false) });
-      console.log(data);
-
+        .catch(({ response }) => {
+          setErrMsg(response?.data?.message || 'Registration failed');
+          setSpin(false);
+        });
     },
-
-
     validate: (values) => {
-
       const errors = {}
 
       if (values.name.length < 4) {
-        errors.name = 'name must be more than 4 caraters'
+        errors.name = 'Name must be more than 4 characters'
       }
 
-      let regEmail = /^[a-zA-z0-9]{5,20}@(gmail|yahoo|outlook).(com|org)$/;
+      const regEmail = /^[a-zA-z0-9]{5,20}@(gmail|yahoo|outlook).(com|org)$/;
 
       if (!regEmail.test(values.email)) {
-        errors.email = 'email are invalid';
+        errors.email = 'Email is invalid';
       }
 
       if (!values.password.match(/^[a-zA-z0-9]{5,15}$/)) {
-        errors.password = 'password is INvalid';
+        errors.password = 'Password is invalid';
       }
       if (!values.rePassword.match(values.password)) {
-        errors.rePassword = 'rePassword not matched'
+        errors.rePassword = 'Passwords do not match'
       }
-      // if (!values.phone.match(/^(\+20)?01[0125][0-9]{8}$/)) {
-      //   errors.phone = 'Phone is Invalid'
-      // }
 
       return errors
     }
-
   })
 
   if (token) {
@@ -79,45 +63,57 @@ export default function Register() {
   }
 
   return (
-    <>
-      <div className="w-50 m-auto my-5 py-5 min-vh-100">
-        <form className="form py-5 my-5" onSubmit={myFormik.handleSubmit}>
+    <div className='auth-shell'>
 
-          <h2>Register Now :</h2>
-
-          <input onBlur={myFormik.handleBlur} id='name' onChange={myFormik.handleChange} value={myFormik.values.name} name='name' type="text" className="form-control my-3" placeholder='Enter Your Name' />
-          {myFormik.errors.name && myFormik.touched.name ? <div className="alert alert-danger"> {myFormik.errors.name}</div> : null}
-
-          <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.email} name='email' type="email" className="form-control my-3" placeholder='Enter Your email' />
-          {myFormik.errors.email && myFormik.touched.email ? <div className="alert alert-danger"> {myFormik.errors.email}</div> : null}
-
-          <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.password} name='password' type="password" className="form-control my-3" placeholder='Enter Your Passwore' />
-          {myFormik.errors.password && myFormik.touched.password ? <div className="alert alert-danger"> {myFormik.errors.password}</div> : null}
-
-          <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.rePassword} name='rePassword' type="password" className="form-control my-3" placeholder='Enter Your rePasswore' />
-          {myFormik.errors.rePassword && myFormik.touched.rePassword ? <div className="alert alert-danger"> {myFormik.errors.rePassword}</div> : null}
-
-          {/* <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.phone} name='phone' type="tel" className="form-control my-3" placeholder='Enter Your Phone' />
-          {myFormik.errors.phone && myFormik.touched.phone ? <div className="alert alert-danger"> {myFormik.errors.phone}</div> : null} */}
-
-          <div className='d-flex  justify-content-end'>
-
-            <button type='submit' disabled={(myFormik.isValid === false || myFormik.dirty === false)} className=' btn bg-dark text-white'>
-              {spin && <i className='fa fa-spin  fa-spinner '></i>}
-              {spin || 'Register'}
-            </button>
-
-          </div>
-
-          {errMsg ? <div className="alert alert-danger my-3">{errMsg}</div> : null}
-          {sucMsg ? <div className='alert alert-success'>{sucMsg}</div> : null}
+          <div className='auth-brand'>
+          <div className='auth-brand__mark'>D</div>
+          <span>DeployHub</span>
+        </div>
 
 
+      
+      <div className='auth-card'>
 
+        <h1>Create your account</h1>
+        <p>Join DeployHub and start shipping faster.</p>
 
+        <form className='auth-form' onSubmit={myFormik.handleSubmit}>
+          <label className='auth-label'>
+            Name
+            <input onBlur={myFormik.handleBlur} id='name' onChange={myFormik.handleChange} value={myFormik.values.name} name='name' type='text' className='auth-input' placeholder='Enter your name' />
+          </label>
+          {myFormik.errors.name && myFormik.touched.name ? <div className='auth-alert auth-alert--danger'>{myFormik.errors.name}</div> : null}
+
+          <label className='auth-label'>
+            Email
+            <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.email} name='email' type='email' className='auth-input' placeholder='Enter your email' />
+          </label>
+          {myFormik.errors.email && myFormik.touched.email ? <div className='auth-alert auth-alert--danger'>{myFormik.errors.email}</div> : null}
+
+          <label className='auth-label'>
+            Password
+            <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.password} name='password' type='password' className='auth-input' placeholder='Choose a password' />
+          </label>
+          {myFormik.errors.password && myFormik.touched.password ? <div className='auth-alert auth-alert--danger'>{myFormik.errors.password}</div> : null}
+
+          <label className='auth-label'>
+            Confirm password
+            <input onBlur={myFormik.handleBlur} onChange={myFormik.handleChange} value={myFormik.values.rePassword} name='rePassword' type='password' className='auth-input' placeholder='Confirm your password' />
+          </label>
+          {myFormik.errors.rePassword && myFormik.touched.rePassword ? <div className='auth-alert auth-alert--danger'>{myFormik.errors.rePassword}</div> : null}
+
+          <button type='submit' disabled={(myFormik.isValid === false || myFormik.dirty === false || spin)} className='auth-btn auth-submit'>
+            {spin ? <i className='fa fa-spin fa-spinner'></i> : 'Create account'}
+          </button>
         </form>
-        
+
+        {errMsg ? <div className='auth-alert auth-alert--danger mt-3'>{errMsg}</div> : null}
+        {sucMsg ? <div className='auth-alert auth-alert--success mt-3'>{sucMsg}</div> : null}
+
+        <p className='auth-footer'>
+          Already have an account? <Link to={'/login'} className='auth-link'>Sign in</Link>
+        </p>
       </div>
-    </>
+    </div>
   )
 }
