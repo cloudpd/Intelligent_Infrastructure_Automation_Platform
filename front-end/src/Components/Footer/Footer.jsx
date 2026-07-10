@@ -8,9 +8,9 @@ import amExpress from '../../finalProject assets/footerlogos/americanExpress.8e8
 
 export default function Footer() {
   return (
-
-    <div className='d-flex justify-content-center align-items-center pt-3'>
-      <h6 className='fw-bolder text-muted'> Developed By Autodeployers Team © All Rights Reserved</h6>
-    </div>
+<></>
+    // <div className='d-flex justify-content-center align-items-center pt-3'>
+    //   <h6 className='fw-bolder text-muted'> Developed By Autodeployers Team © All Rights Reserved</h6>
+    // </div>
   )
 }
