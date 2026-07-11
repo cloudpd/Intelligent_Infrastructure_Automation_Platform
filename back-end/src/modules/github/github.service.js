@@ -10,3 +10,15 @@ async function getDecryptedToken(userId, tokenId) {
   if (!record) throw new AppError('Token not found', 404);
   return decrypt(record.token);
 }
+
+async function listUserTokens(userId) {
+  return GithubToken.findAll({
+    where: { user_id: userId },
+    attributes: ['id', 'name', 'description', 'createdAt'],
+  });
+}
+
+async function deleteToken(userId, tokenId) {
+  const deleted = await GithubToken.destroy({ where: { id: tokenId, user_id: userId } });
+  if (!deleted) throw new AppError('Token not found', 404);
+}
