@@ -23,6 +23,7 @@ import Recovery from './Components/Login/Recovery';
 import Projects from './Components/Projects/Projects.jsx';
 import ProjectDetails from './Components/Projects/ProjectDetails.jsx';
 import Services from './Components/Services/Services.jsx';
+import GithubTokens from './Components/GithubTokens/GithubTokens.jsx';
 // import Wishlist from './Components/Wishlist/Wishlist';
 // import WishContextProvider from './Context/WishContext';
 // import ProductCategory from './Components/Categories/ProductCategory';
@@ -80,7 +81,13 @@ function App() {
               {/* </WishContextProvider> */}
             </ProtectedRoute>
         },
-        // {
+        {
+          path: '/github-tokens', element:
+            <ProtectedRoute>
+              <GithubTokens />
+            </ProtectedRoute>
+        },
+                // {
         //   path: '/wishlist', element:
         //     <ProtectedRoute>
         //       {/* <WishContextProvider> */}
