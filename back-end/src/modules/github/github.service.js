@@ -1,8 +1,38 @@
+const { GithubToken } = require('./github.model');
 const { encrypt, decrypt } = require('../../core/utils/encryption');
+const AppError = require('../../core/utils/AppError');
 
 async function saveToken(userId, name, rawToken, description) {
   const encryptedToken = encrypt(rawToken);
-  return GithubToken.create({ user_id: userId, name, token: encryptedToken, description });
+
+  const savedToken = await GithubToken.create({
+    user_id: userId,
+    name,
+    token: encryptedToken,
+    description,
+  });
+
+  return {
+    id: savedToken.id,
+    name: savedToken.name,
+    description: savedToken.description,
+    createdAt: savedToken.createdAt,
+  };
+}
+
+async function listUserTokens(userId) {
+  return GithubToken.findAll({
+    where: { user_id: userId },
+    attributes: ['id', 'name', 'description', 'createdAt'], 
+    order: [['createdAt', 'DESC']],
+  });
+}
+
+async function deleteToken(userId, tokenId) {
+  const deleted = await GithubToken.destroy({
+    where: { id: tokenId, user_id: userId },
+  });
+  if (!deleted) throw new AppError('Token not found', 404);
 }
 
 async function getDecryptedToken(userId, tokenId) {
@@ -11,14 +41,4 @@ async function getDecryptedToken(userId, tokenId) {
   return decrypt(record.token);
 }
 
-async function listUserTokens(userId) {
-  return GithubToken.findAll({
-    where: { user_id: userId },
-    attributes: ['id', 'name', 'description', 'createdAt'],
-  });
-}
-
-async function deleteToken(userId, tokenId) {
-  const deleted = await GithubToken.destroy({ where: { id: tokenId, user_id: userId } });
-  if (!deleted) throw new AppError('Token not found', 404);
-}
+module.exports = { saveToken, listUserTokens, deleteToken, getDecryptedToken };

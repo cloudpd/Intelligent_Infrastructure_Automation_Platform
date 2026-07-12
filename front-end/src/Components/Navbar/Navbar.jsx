@@ -42,6 +42,8 @@ export default function Navbar() {
 
               <NavLink to="/services">Services</NavLink>
 
+              <NavLink to="/github-tokens">GitHub Tokens</NavLink>
+
             </nav>
           )}
         </div>
