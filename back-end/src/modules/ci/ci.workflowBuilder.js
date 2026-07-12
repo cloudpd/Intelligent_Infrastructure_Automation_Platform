@@ -22,6 +22,8 @@ class WorkflowBuilder {
    *  workflow configuration
    */
   build() {
+     console.log("WorkflowBuilder is being executed");
+     
     const workflow = {};
 
     // 1. Header
@@ -36,7 +38,10 @@ class WorkflowBuilder {
     workflow.permissions = {
       contents: 'read',
       packages: 'write',
+      'security-events': 'write'
     };
+
+     console.log(workflow.permissions);
 
     // 4. Jobs
     workflow.jobs = {
@@ -56,8 +61,18 @@ class WorkflowBuilder {
       awsEcrRegion: this.config.awsEcrRegion,
     };
 
-    const registryLoginGen = new RegistryLoginGenerator(this.config.registry, registryConfig);
-    workflow.jobs.build.steps.push(registryLoginGen.generate());
+    const registryLoginGen = new RegistryLoginGenerator(
+  this.config.registry,
+  registryConfig
+);
+
+const loginSteps = registryLoginGen.generate();
+
+if (Array.isArray(loginSteps)) {
+  workflow.jobs.build.steps.push(...loginSteps);
+} else {
+  workflow.jobs.build.steps.push(loginSteps);
+}
 
     // 6. Docker Build Step
     const dockerBuildGen = new DockerBuildGenerator(

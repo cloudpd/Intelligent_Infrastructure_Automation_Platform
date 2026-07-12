@@ -36,16 +36,13 @@ async function getCIConfigController(req, res, next) {
   }
 }
 
-/**
- * Create or Update CI Configuration
- * POST /services/:serviceId/ci
- */
+
 async function upsertCIConfigController(req, res, next) {
   try {
     const serviceId = req.params.serviceId || req.body.serviceId;
     const config = req.ciConfig;
 
-    // Validate repository access
+   
     await validateRepository(req.user.id, serviceId);
 
     // Upsert configuration
@@ -93,10 +90,7 @@ async function upsertCIConfigController(req, res, next) {
   }
 }
 
-/**
- * Preview Generated Workflow YAML
- * GET /services/:serviceId/ci/preview
- */
+
 async function previewWorkflowController(req, res, next) {
   try {
     const { serviceId } = req.params;
@@ -125,7 +119,7 @@ async function previewWorkflowController(req, res, next) {
     // Generate workflow YAML
     const workflowYAML = ciService.generateWorkflowYAML(config);
 
-    // Return preview and the expected workflow file path in the repository
+    // Return preview and the expected workflow file path in the repository y2ma han3mlo download y2ma ntl3o yml file w khalas
     res.status(200).json({
       success: true,
       message: 'Workflow preview generated',
@@ -135,13 +129,50 @@ async function previewWorkflowController(req, res, next) {
         filePath: '.github/workflows/deploy.yml',
       },
     });
+//     res.setHeader("Content-Type", "text/yaml");
+//     res.setHeader(
+//   "Content-Disposition",
+//   'attachment; filename="deploy.yml"'
+// );
+
+// res.send(workflowYAML);
   } catch (err) {
     next(err);
   }
 }
 
+async function deleteCIConfigController(req, res, next) {
+  try {
+    const { serviceId } = req.params;
+
+    await validateRepository(req.user.id, serviceId);
+
+    const deleted = await CIConfig.destroy({
+      where: {
+        service_id: serviceId,
+      },
+    });
+
+    if (!deleted) {
+      throw new AppError('CI configuration not found', 404);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'CI configuration deleted successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+
 module.exports = {
   getCIConfigController,
   upsertCIConfigController,
   previewWorkflowController,
+  deleteCIConfigController,
+  
 };
+

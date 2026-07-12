@@ -9,9 +9,6 @@ const { Project } = require('../../modules/projects/projects.model');
 
 const execAsync = promisify(exec);
 
-/**
- * Joi Schema for CI Configuration Input
- */
 const ciConfigSchema = Joi.object({
   serviceId: Joi.string().uuid().required().messages({
     'string.empty': 'Service ID is required',
@@ -97,13 +94,10 @@ async function validateRepository(userId, serviceId) {
     throw new AppError('You do not have permission to access this service', 403);
   }
 
-  // Parse GitHub URL
+ 
   const { owner, repo } = parseGithubUrl(service.repository_url);
 
-  // Check if Dockerfile exists in the repository
-  // Note: This is a simplified check. In production, you'd call GitHub API
-  // to verify the Dockerfile exists in the selected branch.
-  // For now, we assume it exists and Person 2 can enhance this with GitHub API calls.
+
 
   return {
     owner,

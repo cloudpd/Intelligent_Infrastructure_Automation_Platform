@@ -14,4 +14,11 @@ router.post('/:serviceId/ci/create', validateCIConfig, ciController.upsertCIConf
 
 router.get('/:serviceId/ci/preview', ciController.previewWorkflowController);
 
+router.delete('/:serviceId/ci/delete', ciController.deleteCIConfigController);
+
+
+
+
+
+
 module.exports = router;
