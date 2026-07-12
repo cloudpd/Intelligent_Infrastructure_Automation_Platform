@@ -12,7 +12,7 @@ async function start() {
     await sequelize.authenticate();
     console.log('✅ Connected to MySQL');
 
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log('✅ Users table synced');
 
     app.listen(PORT, () => {

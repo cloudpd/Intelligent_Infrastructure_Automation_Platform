@@ -4,6 +4,9 @@ const projectsRoutes = require('./modules/projects/projects.routes');
 const servicesRoutes = require('./modules/service/service.routes');
 const errorHandler = require('./core/middlewares/errorHandler');
 const githubRoutes = require('./modules/github/github.routes');
+
+const ciRoutes = require('./modules/ci/ci.routes');
+
 const cors = require("cors") ;
 const app = express();
 
@@ -11,6 +14,8 @@ app.use(cors({
   origin: '*'
 }));
 app.use(express.json());
+
+app.use('/services/ci', ciRoutes);
 
 app.use('/auth', authRoutes);
 app.use('/projects', projectsRoutes);
