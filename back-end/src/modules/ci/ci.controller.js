@@ -41,7 +41,6 @@ async function upsertCIConfigController(req, res, next) {
   try {
     const serviceId = req.params.serviceId || req.body.serviceId;
     const config = req.ciConfig;
-
    
     await validateRepository(req.user.id, serviceId);
 
@@ -94,11 +93,13 @@ async function upsertCIConfigController(req, res, next) {
 async function previewWorkflowController(req, res, next) {
   try {
     const { serviceId } = req.params;
-
     // Get configuration from database
     const ciConfig = await CIConfig.findOne({
       where: { service_id: serviceId },
     });
+
+
+    console.log(ciConfig);
 
     if (!ciConfig) {
       throw new AppError('No CI configuration found for this service', 404);
@@ -167,12 +168,36 @@ async function deleteCIConfigController(req, res, next) {
 }
 
 
+async function pushWorkflowToGithub(req, res, next) {
+    const { serviceId } = req.params;
+    const userId = req.user.id;
+    const config = await CIConfig.findOne({
+      where: { service_id: serviceId },
+    });
+    console.log("===========================================-----------------------");
+    console.log(config);
+    if (!config) {
+      return res.status(404).json({
+        success: false,
+        message: 'No CI configuration found for this service',
+      });
+    }
+    const result = await ciService.pushWorkflowToGithub(userId, serviceId, config);
+    res.status(200).json({
+      success: true,
+      message: 'Workflow pushed to GitHub successfully',
+      result,
+    });
+}
+
+
 
 module.exports = {
   getCIConfigController,
   upsertCIConfigController,
   previewWorkflowController,
   deleteCIConfigController,
+    pushWorkflowToGithub,
   
 };
 

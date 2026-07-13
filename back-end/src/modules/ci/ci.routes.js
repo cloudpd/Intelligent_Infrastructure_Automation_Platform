@@ -12,6 +12,8 @@ router.get('/:serviceId/ci/get', ciController.getCIConfigController);
 
 router.post('/:serviceId/ci/create', validateCIConfig, ciController.upsertCIConfigController);
 
+router.post("/:serviceId/ci/push", ciController.pushWorkflowToGithub);
+
 router.get('/:serviceId/ci/preview', ciController.previewWorkflowController);
 
 router.delete('/:serviceId/ci/delete', ciController.deleteCIConfigController);

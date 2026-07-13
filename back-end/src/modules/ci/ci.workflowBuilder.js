@@ -27,11 +27,11 @@ class WorkflowBuilder {
     const workflow = {};
 
     // 1. Header
-    const headerGen = new HeaderGenerator(this.config.pipelineName);
+    const headerGen = new HeaderGenerator(this.config.pipeline_name);
     Object.assign(workflow, headerGen.generate());
 
     // 2. Trigger
-    const triggerGen = new TriggerGenerator(this.config.triggerBranch);
+    const triggerGen = new TriggerGenerator(this.config.trigger_branch);
     Object.assign(workflow, triggerGen.generate());
 
     // 3. Permissions (minimal, tighten as needed)
@@ -76,7 +76,7 @@ if (Array.isArray(loginSteps)) {
 
     // 6. Docker Build Step
     const dockerBuildGen = new DockerBuildGenerator(
-      this.config.imageName,
+      this.config.image_name,
       this.config.registry,
       registryConfig
     );
@@ -85,7 +85,7 @@ if (Array.isArray(loginSteps)) {
     // 8. Trivy Scan Step (Optional)
     if (this.config.enableTrivy) {
       const trivyGen = new TrivyGenerator(
-        this.config.imageName,
+        this.config.image_name,
         this.config.registry,
         registryConfig
       );
@@ -94,7 +94,7 @@ if (Array.isArray(loginSteps)) {
 
     // 9. Docker Push Step
     const dockerPushGen = new DockerPushGenerator(
-      this.config.imageName,
+      this.config.image_name,
       this.config.registry,
       registryConfig
     );

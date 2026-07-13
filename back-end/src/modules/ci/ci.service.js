@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const AppError = require('../../core/utils/AppError');
-
 const { GithubToken } = require('../../modules/github/github.model');
 const { Service } = require('../../modules/service/service.model');
 const { Project } = require('../../modules/projects/projects.model');
@@ -62,7 +61,7 @@ function generateWorkflowYAML(config) {
 }
 
 async function pushWorkflowToGithub(userId, serviceId, config) {
-  const workflowYAML = generateWorkflowYAML(config);
+  const workflowYAML = generateWorkflowYAML(config);  
   const contentBase64 = Buffer.from(workflowYAML).toString("base64");
 
   const service = await getServiceById(serviceId, userId);
@@ -78,7 +77,7 @@ async function pushWorkflowToGithub(userId, serviceId, config) {
   };
 
   const res = await fetch(
-    `${githubApiBaseUrl}/repos/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}`,
+    `${githubApiBaseUrl}/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}`,
     {
       method: "PUT",
       headers: {
