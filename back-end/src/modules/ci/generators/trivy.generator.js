@@ -7,7 +7,7 @@ class TrivyGenerator {
 
   generateForDockerHub() {
     const sha = '${{ github.sha }}';
-    const imageTag = `${'${{ secrets.DOCKER_HUB_USERNAME }}'}/${this.imageName}:${sha}`;
+    const imageTag = `${'${{ secrets.DOCKER_USERNAME }}'}/${this.imageName}:${sha}`;
 
     return {
       name: 'Scan Image with Trivy',
@@ -24,7 +24,7 @@ class TrivyGenerator {
   generateForAWSECR() {
     const sha = '${{ github.sha }}';
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
-    const imageTag = `${ecrRegistry}/${this.imageName}:${sha}`;
+    const imageTag = `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}:${sha}`;
 
     return {
       name: 'Scan Image with Trivy',

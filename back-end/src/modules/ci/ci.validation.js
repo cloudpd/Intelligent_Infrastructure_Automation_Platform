@@ -48,13 +48,7 @@ const ciConfigSchema = Joi.object({
 //     }),
 //     otherwise: Joi.optional(),
 //   }),
-  awsEcrRegion: Joi.when('registry', {
-    is: 'aws-ecr',
-    then: Joi.string().required().messages({
-      'string.empty': 'AWS ECR region is required for AWS ECR registry',
-    }),
-    otherwise: Joi.optional(),
-  }),
+  awsEcrRegion: Joi.string().optional().allow(null, ''),
 }).unknown(false);
 
 /**

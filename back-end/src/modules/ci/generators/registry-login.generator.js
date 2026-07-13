@@ -9,13 +9,13 @@ class RegistryLoginGenerator {
       name: 'Login to Docker Hub',
       uses: 'docker/login-action@v3',
       with: {
-        username: '${{ secrets.DOCKER_HUB_USERNAME }}',
-        password: '${{ secrets.DOCKER_HUB_PASSWORD }}',
+        username: '${{ secrets.DOCKER_USERNAME }}',
+        password: '${{ secrets.DOCKER_PASSWORD }}',
       },
     };
   }
 
-  generateAWSECRLogin(region) {
+  generateAWSECRLogin() {
     return [
       {
         name: 'Configure AWS Credentials',
@@ -23,7 +23,7 @@ class RegistryLoginGenerator {
         with: {
           'aws-access-key-id': '${{ secrets.AWS_ACCESS_KEY_ID }}',
           'aws-secret-access-key': '${{ secrets.AWS_SECRET_ACCESS_KEY }}',
-          'aws-region': region,
+          'aws-region': '${{ secrets.AWS_REGION }}',
         },
       },
       {
@@ -40,7 +40,7 @@ class RegistryLoginGenerator {
     }
 
     if (this.registry === 'aws-ecr') {
-      return this.generateAWSECRLogin(this.registryConfig.awsEcrRegion);
+      return this.generateAWSECRLogin();
     }
 
     throw new Error(`Unknown registry: ${this.registry}`);
