@@ -10,6 +10,8 @@ const SetupNodeGenerator = require('./generators/setup-node.generator');
 const SetupPythonGenerator = require('./generators/setup-python.generator');
 const LintNodeGenerator = require('./generators/lint-node.generator');
 const LintPythonGenerator = require('./generators/lint-python.generator');
+const TestNodeGenerator = require('./generators/test-node.generator');
+const TestPythonGenerator = require('./generators/test-python.generator');
 
 /**
  * Workflow Builder
@@ -78,6 +80,10 @@ class WorkflowBuilder {
       // 7. Lint
       const lintGen = new LintNodeGenerator();
       workflow.jobs.build.steps.push(lintGen.generate());
+
+      // 8. Unit Tests
+      const testGen = new TestNodeGenerator();
+      workflow.jobs.build.steps.push(testGen.generate());
     } else if (this.config.language === 'python') {
       const setupGen = new SetupPythonGenerator();
       workflow.jobs.build.steps.push(...setupGen.generate());
@@ -85,6 +91,10 @@ class WorkflowBuilder {
       // 7. Lint
       const lintGen = new LintPythonGenerator();
       workflow.jobs.build.steps.push(lintGen.generate());
+
+      // 8. Unit Tests
+      const testGen = new TestPythonGenerator();
+      workflow.jobs.build.steps.push(testGen.generate());
     }
 
     // 6. Registry Login Step
