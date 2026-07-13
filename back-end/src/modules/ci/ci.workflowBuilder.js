@@ -8,6 +8,8 @@ const TrivyGenerator = require('./generators/trivy.generator');
 const DockerPushGenerator = require('./generators/docker-push.generator');
 const SetupNodeGenerator = require('./generators/setup-node.generator');
 const SetupPythonGenerator = require('./generators/setup-python.generator');
+const LintNodeGenerator = require('./generators/lint-node.generator');
+const LintPythonGenerator = require('./generators/lint-python.generator');
 
 /**
  * Workflow Builder
@@ -72,9 +74,17 @@ class WorkflowBuilder {
     if (this.config.language === 'node') {
       const setupGen = new SetupNodeGenerator();
       workflow.jobs.build.steps.push(...setupGen.generate());
+
+      // 7. Lint
+      const lintGen = new LintNodeGenerator();
+      workflow.jobs.build.steps.push(lintGen.generate());
     } else if (this.config.language === 'python') {
       const setupGen = new SetupPythonGenerator();
       workflow.jobs.build.steps.push(...setupGen.generate());
+
+      // 7. Lint
+      const lintGen = new LintPythonGenerator();
+      workflow.jobs.build.steps.push(lintGen.generate());
     }
 
     // 6. Registry Login Step
