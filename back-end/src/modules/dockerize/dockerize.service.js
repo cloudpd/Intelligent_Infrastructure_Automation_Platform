@@ -10,6 +10,7 @@ async function getServiceOwnedByUser(userId, serviceId) {
     include: [
       {
         model: Project,
+        as: 'project',
         where: { owner_id: userId },
         attributes: [],
       },

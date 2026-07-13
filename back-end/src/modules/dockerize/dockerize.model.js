@@ -33,7 +33,6 @@ const BuildConfig = sequelize.define(
   }
 );
 
-// One-to-one: each service has exactly one build config
 Service.hasOne(BuildConfig, { foreignKey: 'service_id', onDelete: 'CASCADE' });
 BuildConfig.belongsTo(Service, { foreignKey: 'service_id' });
 
