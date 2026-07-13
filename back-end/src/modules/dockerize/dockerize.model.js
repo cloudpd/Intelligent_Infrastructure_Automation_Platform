@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
-const { Service } = require('../services/services.model'); // ⚠️ confirm this path
+const { Service } = require('../service/service.model');   
 
 const BuildConfig = sequelize.define(
   'BuildConfig',
@@ -20,7 +20,7 @@ const BuildConfig = sequelize.define(
     },
     language: {
       type: DataTypes.STRING,
-      allowNull: true, // set only when WE generated the Dockerfile; null if user already had one
+      allowNull: true, 
     },
     status: {
       type: DataTypes.ENUM('pending', 'completed'),

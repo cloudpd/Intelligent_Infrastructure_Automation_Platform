@@ -1,11 +1,9 @@
 const { BuildConfig } = require('./dockerize.model');
 const AppError = require('../../core/utils/AppError');
 const githubService = require('../github/github.service');
-const { Service } = require('../services/services.model');   // ⚠️ confirm this path
-const { Project } = require('../projects/projects.model');   // ⚠️ confirm this path
+const { Service } = require('../service/service.model');   
+const { Project } = require('../projects/projects.model');   
 
-// Confirms `serviceId` exists AND belongs (via its project) to `userId`.
-// Returns the service row if valid, or null otherwise.
 async function getServiceOwnedByUser(userId, serviceId) {
   const service = await Service.findOne({
     where: { id: serviceId },
