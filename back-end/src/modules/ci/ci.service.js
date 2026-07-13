@@ -1,17 +1,15 @@
 const fs = require("fs");
 const path = require("path");
 const AppError = require('../../core/utils/AppError');
-
 const { GithubToken } = require('../../modules/github/github.model');
 const { Service } = require('../../modules/service/service.model');
 const { Project } = require('../../modules/projects/projects.model');
 
 const { decrypt } = require('../../core/utils/encryption');
+const WorkflowBuilder = require('./ci.workflowBuilder');
 
-const FILE_PATH_IN_REPO = ".github/workflows/ci.yaml";
-const LOCAL_FILE_PATH = path.join(__dirname, "templates/ci.yaml");
+const FILE_PATH_IN_REPO = ".github/workflows/deploy.yml";
 const githubApiBaseUrl = "https://api.github.com/repos";
-
 
 function parseGithubUrl(repositoryUrl) {
   const cleanUrl = repositoryUrl.replace(/\.git$/, "");
@@ -57,25 +55,29 @@ async function getFileSha(token, owner, repo, branch) {
   return data.sha;
 }
 
-async function pushFile(userId, serviceId) {
-  const content = fs.readFileSync(LOCAL_FILE_PATH, "utf-8");
-  const contentBase64 = Buffer.from(content).toString("base64");
+function generateWorkflowYAML(config) {
+  const builder = new WorkflowBuilder(config);
+  return builder.generateYAML();
+}
 
-  const { branch, repository_url } = await getServiceById(serviceId, userId);
-  const { owner, repo } = parseGithubUrl(repository_url);
+async function pushWorkflowToGithub(userId, serviceId, config) {
+  const workflowYAML = generateWorkflowYAML(config);  
+  const contentBase64 = Buffer.from(workflowYAML).toString("base64");
+
+  const service = await getServiceById(serviceId, userId);
+  const { owner, repo } = parseGithubUrl(service.repository_url);
   const token = await getPATTokenFromDB(userId);
-
-  const sha = await getFileSha(token, owner, repo, branch);
+  const sha = await getFileSha(token, owner, repo, service.branch);
 
   const body = {
-    message: "Add/Update ci.yaml via API",
+    message: `Create or update ${FILE_PATH_IN_REPO}`,
     content: contentBase64,
-    branch,
+    branch: service.branch,
     ...(sha && { sha }),
   };
 
   const res = await fetch(
-    `${githubApiBaseUrl}/repos/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}`,
+    `${githubApiBaseUrl}/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}`,
     {
       method: "PUT",
       headers: {
@@ -95,4 +97,31 @@ async function pushFile(userId, serviceId) {
   return result;
 }
 
-module.exports = { pushFile };
+async function getExistingWorkflow(userId, serviceId) {
+  const service = await getServiceById(serviceId, userId);
+  const { owner, repo } = parseGithubUrl(service.repository_url);
+  const token = await getPATTokenFromDB(userId);
+
+  const res = await fetch(
+    `${githubApiBaseUrl}/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}?ref=${service.branch}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  if (res.status === 404) return null;
+  if (!res.ok) throw new AppError(`Failed to fetch workflow: ${res.status}`, res.status);
+
+  const data = await res.json();
+  return {
+    sha: data.sha,
+    path: data.path,
+    content: Buffer.from(data.content, 'base64').toString('utf-8'),
+    url: data.html_url,
+  };
+}
+
+module.exports = { generateWorkflowYAML, pushWorkflowToGithub, getExistingWorkflow };

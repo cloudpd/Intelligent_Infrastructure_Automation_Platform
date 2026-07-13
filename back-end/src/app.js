@@ -15,7 +15,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use('/services/ci', ciRoutes);
+app.use('/services', ciRoutes);
 
 app.use('/auth', authRoutes);
 app.use('/projects', projectsRoutes);
