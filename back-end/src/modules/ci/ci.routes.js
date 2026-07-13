@@ -2,6 +2,9 @@ const express = require('express');
 const ciController = require('./ci.controller');
 const authenticate = require('../../core/middlewares/authenticate');
 const validateCIConfig = require('./ci.configMiddleware');
+const { pushSecretsSchema } = require('./ci.validation');
+const validate = require('../../core/middlewares/validate');
+
 
 const router = express.Router();
 
@@ -19,6 +22,11 @@ router.get('/:serviceId/ci/preview', ciController.previewWorkflowController);
 router.delete('/:serviceId/ci/delete', ciController.deleteCIConfigController);
 
 
+router.post(
+  "/:serviceId/ci/secrets",
+  validate(pushSecretsSchema),
+  ciController.pushSecrets             
+);
 
 
 

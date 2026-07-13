@@ -124,4 +124,11 @@ async function getExistingWorkflow(userId, serviceId) {
   };
 }
 
-module.exports = { generateWorkflowYAML, pushWorkflowToGithub, getExistingWorkflow };
+module.exports = { 
+  generateWorkflowYAML, 
+  pushWorkflowToGithub, 
+  getExistingWorkflow,
+  getServiceById,
+  getPATTokenFromDB,
+  parseGithubUrl 
+};

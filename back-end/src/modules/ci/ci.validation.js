@@ -7,6 +7,9 @@ const AppError = require('../../core/utils/AppError');
 const { Service } = require('../../modules/service/service.model');
 const { Project } = require('../../modules/projects/projects.model');
 
+const { REGISTRY_TYPES } = require("./registry-secrets.config");
+
+
 const execAsync = promisify(exec);
 
 const ciConfigSchema = Joi.object({
@@ -214,6 +217,17 @@ async function validateAllAndReturn(userId, configData) {
   };
 }
 
+
+
+
+const pushSecretsSchema = Joi.object({
+  registry: Joi.string()
+    .valid(...Object.values(REGISTRY_TYPES))
+    .default(REGISTRY_TYPES.DOCKER),
+  secrets: Joi.object().pattern(Joi.string(), Joi.string()).required(),
+});
+
+
 module.exports = {
   validateCIConfig,
   validateRepository,
@@ -221,4 +235,5 @@ module.exports = {
   validateDockerfileExists,
   parseGithubUrl,
   validateAllAndReturn,
+  pushSecretsSchema
 };
