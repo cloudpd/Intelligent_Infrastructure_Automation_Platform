@@ -10,9 +10,14 @@ function validateCIConfigMiddleware(req, res, next) {
       triggerBranch,
       registry,
       imageName,
-      enableTrivy,
       awsEcrRegion,
     } = req.body;
+
+    const enableTrivy = req.body.enableTrivy !== undefined ? req.body.enableTrivy : req.body.enabletrivy;
+    const enableLint = req.body.enableLint !== undefined ? req.body.enableLint : req.body.enablelint;
+    const enableTests = req.body.enableTests !== undefined ? req.body.enableTests : req.body.enabletests;
+    const enableBuild = req.body.enableBuild !== undefined ? req.body.enableBuild : req.body.enablebuild;
+    const enableInstall = req.body.enableInstall !== undefined ? req.body.enableInstall : req.body.enableinstall;
 
     const serviceId = req.params.serviceId || req.body.serviceId;
 
@@ -27,6 +32,10 @@ function validateCIConfigMiddleware(req, res, next) {
       registry,
       imageName,
       enableTrivy,
+      enableLint,
+      enableTests,
+      enableBuild,
+      enableInstall,
       awsEcrRegion,
     };
 

@@ -41,13 +41,18 @@ const ciConfigSchema = Joi.object({
   enableTrivy: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Trivy must be true or false',
   }),
-//   dockerHubUsername: Joi.when('registry', {
-//     is: 'docker-hub',
-//     then: Joi.string().required().messages({
-//       'string.empty': 'Docker Hub username is required for Docker Hub registry',
-//     }),
-//     otherwise: Joi.optional(),
-//   }),
+  enableLint: Joi.boolean().default(true).messages({
+    'boolean.base': 'Enable Lint must be true or false',
+  }),
+  enableTests: Joi.boolean().default(true).messages({
+    'boolean.base': 'Enable Tests must be true or false',
+  }),
+  enableBuild: Joi.boolean().default(false).messages({
+    'boolean.base': 'Enable Build must be true or false',
+  }),
+  enableInstall: Joi.boolean().default(true).messages({
+    'boolean.base': 'Enable Install must be true or false',
+  }),
   awsEcrRegion: Joi.string().optional().allow(null, ''),
 }).unknown(false);
 

@@ -39,6 +39,24 @@ const CIConfig = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    enable_lint: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    enable_tests: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+
+    enable_build: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    enable_install: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
 
     aws_ecr_region: {
       type: DataTypes.STRING,
