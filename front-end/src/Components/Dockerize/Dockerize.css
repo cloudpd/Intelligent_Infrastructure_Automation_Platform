@@ -32,3 +32,31 @@
   max-width: 720px;
   margin: 1.5rem auto 0;
 }
+
+.dockerize-token-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dockerize-reload-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, transform 0.4s ease;
+  margin-left: 0.5rem;
+}
+
+.dockerize-reload-btn:hover {
+  opacity: 1;
+}
+
+.dockerize-reload-btn:active i {
+  transform: rotate(180deg);
+}

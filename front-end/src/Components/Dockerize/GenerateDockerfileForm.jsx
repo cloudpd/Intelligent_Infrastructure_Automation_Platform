@@ -16,10 +16,11 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [reloadTokens, setReloadTokens] = useState(false);
 
   useEffect(() => {
     fetchTokens();
-  }, []);
+  }, [reloadTokens]);
 
   function fetchTokens() {
     const token = localStorage.getItem('token');
@@ -147,7 +148,11 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
           </label>
 
           <label>
-            GitHub token to use
+            <div className='dockerize-token-label-row'>
+              <span style={{ marginRight: '0.5rem' }}>GitHub token to use</span>
+              
+            </div>
+
             {loadingTokens ? (
               <p className='project-label'>Loading your tokens...</p>
             ) : tokens.length === 0 ? (
@@ -155,15 +160,32 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
                 You have no saved GitHub tokens yet. Add one from the GitHub Tokens page first.
               </p>
             ) : (
-              <select value={githubTokenId} onChange={(e) => setGithubTokenId(e.target.value)} required>
-                <option value=''>Select a token...</option>
-                {tokens.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <select value={githubTokenId} onChange={(e) => setGithubTokenId(e.target.value)} required style={{width: '300px', marginRight: '0.5rem', height: '2rem'}}>
+                  <option value=''>Select a token...</option>
+                  {tokens.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type='button'
+                  className='dockerize-reload-btn'
+                  title='Refresh token list'
+                  onClick={() => setReloadTokens((prev) => !prev)}
+                >
+                  <i className='fa-solid fa-rotate'></i>
+                </button>
+              </div>
+              
             )}
+
+            <div>
+              <a href='/github-tokens' target='_blank' rel='noopener noreferrer'>
+                Create One?
+              </a>
+            </div>
           </label>
 
           {error && <div className='project-alert project-alert--error'>{error}</div>}
