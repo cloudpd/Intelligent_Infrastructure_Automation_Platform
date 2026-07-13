@@ -27,6 +27,10 @@ async function getCIConfigController(req, res, next) {
                 registry: config.registry,
                 imageName: config.image_name,
                 enableTrivy: config.enable_trivy,
+                enableLint: config.enable_lint,
+                enableTests: config.enable_tests,
+                enableBuild: config.enable_build,
+                enableInstall: config.enable_install,
                 dockerHubUsername: config.docker_hub_username,
                 awsEcrRegion: config.aws_ecr_region,
             },
@@ -54,6 +58,10 @@ async function upsertCIConfigController(req, res, next) {
                 registry: config.registry,
                 image_name: config.imageName,
                 enable_trivy: config.enableTrivy,
+                enable_lint: config.enableLint,
+                enable_tests: config.enableTests,
+                enable_build: config.enableBuild,
+                enable_install: config.enableInstall,
                 docker_hub_username: config.dockerHubUsername,
                 aws_ecr_region: config.awsEcrRegion,
             },
@@ -66,6 +74,10 @@ async function upsertCIConfigController(req, res, next) {
                 registry: config.registry,
                 image_name: config.imageName,
                 enable_trivy: config.enableTrivy,
+                enable_lint: config.enableLint,
+                enable_tests: config.enableTests,
+                enable_build: config.enableBuild,
+                enable_install: config.enableInstall,
                 docker_hub_username: config.dockerHubUsername,
                 aws_ecr_region: config.awsEcrRegion,
             });
@@ -80,6 +92,10 @@ async function upsertCIConfigController(req, res, next) {
                 registry: ciConfig.registry,
                 imageName: ciConfig.image_name,
                 enableTrivy: ciConfig.enable_trivy,
+                enableLint: ciConfig.enable_lint,
+                enableTests: ciConfig.enable_tests,
+                enableBuild: ciConfig.enable_build,
+                enableInstall: ciConfig.enable_install,
                 dockerHubUsername: ciConfig.docker_hub_username,
                 awsEcrRegion: ciConfig.aws_ecr_region,
             },
@@ -105,6 +121,9 @@ async function previewWorkflowController(req, res, next) {
             throw new AppError('No CI configuration found for this service', 404);
         }
 
+        // Get the language the user set in the Dockerize step (no GitHub API call needed)
+        const language = await ciService.getLanguageFromBuildConfig(serviceId);
+
         // Build config object for generator
         const config = {
             serviceId,
@@ -113,8 +132,13 @@ async function previewWorkflowController(req, res, next) {
             registry: ciConfig.registry,
             imageName: ciConfig.image_name,
             enableTrivy: ciConfig.enable_trivy,
+            enableLint: ciConfig.enable_lint,
+            enableTests: ciConfig.enable_tests,
+            enableBuild: ciConfig.enable_build,
+            enableInstall: ciConfig.enable_install,
             dockerHubUsername: ciConfig.docker_hub_username,
             awsEcrRegion: ciConfig.aws_ecr_region,
+            language,
         };
 
         // Generate workflow YAML

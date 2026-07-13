@@ -24,6 +24,7 @@ import Projects from './Components/Projects/Projects.jsx';
 import ProjectDetails from './Components/Projects/ProjectDetails.jsx';
 import Services from './Components/Services/Services.jsx';
 import GithubTokens from './Components/GithubTokens/GithubTokens.jsx';
+import DockerizePage from './Components/Dockerize/DockerizePage.jsx';
 // import Wishlist from './Components/Wishlist/Wishlist';
 // import WishContextProvider from './Context/WishContext';
 // import ProductCategory from './Components/Categories/ProductCategory';
@@ -85,6 +86,12 @@ function App() {
           path: '/github-tokens', element:
             <ProtectedRoute>
               <GithubTokens />
+            </ProtectedRoute>
+        },
+        {
+          path: '/services/:serviceId/dockerize', element:
+            <ProtectedRoute>
+              <DockerizePage />
             </ProtectedRoute>
         },
                 // {

@@ -6,6 +6,14 @@ const RegistryLoginGenerator = require('./generators/registry-login.generator');
 const DockerBuildGenerator = require('./generators/docker-build.generator');
 const TrivyGenerator = require('./generators/trivy.generator');
 const DockerPushGenerator = require('./generators/docker-push.generator');
+const SetupNodeGenerator = require('./generators/setup-node.generator');
+const SetupPythonGenerator = require('./generators/setup-python.generator');
+const LintNodeGenerator = require('./generators/lint-node.generator');
+const LintPythonGenerator = require('./generators/lint-python.generator');
+const TestNodeGenerator = require('./generators/test-node.generator');
+const TestPythonGenerator = require('./generators/test-python.generator');
+const BuildNodeGenerator = require('./generators/build-node.generator');
+const BuildPythonGenerator = require('./generators/build-python.generator');
 
 /**
  * Workflow Builder
@@ -22,6 +30,12 @@ class WorkflowBuilder {
       enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
       dockerHubUsername: rawConfig.dockerHubUsername || rawConfig.docker_hub_username,
       awsEcrRegion: rawConfig.awsEcrRegion || rawConfig.aws_ecr_region,
+      // Language from the BuildConfig table set during the Dockerize step
+      language: rawConfig.language || null,
+      enableLint: rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : true),
+      enableTests: rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : true),
+      enableBuild: rawConfig.enable_build !== undefined ? rawConfig.enable_build : (rawConfig.enableBuild !== undefined ? rawConfig.enableBuild : false),
+      enableInstall: rawConfig.enable_install !== undefined ? rawConfig.enable_install : (rawConfig.enableInstall !== undefined ? rawConfig.enableInstall : true),
     };
   }
 
@@ -31,8 +45,8 @@ class WorkflowBuilder {
    *  workflow configuration
    */
   build() {
-     console.log("WorkflowBuilder is being executed");
-     
+    console.log("WorkflowBuilder is being executed");
+
     const workflow = {};
 
     // 1. Header
@@ -50,7 +64,7 @@ class WorkflowBuilder {
       'security-events': 'write'
     };
 
-     console.log(workflow.permissions);
+    console.log(workflow.permissions);
 
     // 4. Jobs
     workflow.jobs = {
@@ -60,9 +74,54 @@ class WorkflowBuilder {
       },
     };
 
-    // 4. Checkout Step
+    // 5. Checkout Step
     const checkoutGen = new CheckoutStepGenerator();
     workflow.jobs.build.steps.push(checkoutGen.generate());
+
+    // 6. Setup Runtime & Install Dependencies (from BuildConfig.language)
+    if (this.config.language === 'node') {
+      const setupGen = new SetupNodeGenerator('18', this.config.enableInstall);
+      workflow.jobs.build.steps.push(...setupGen.generate());
+
+      // 7. Lint (Optional)
+      if (this.config.enableLint) {
+        const lintGen = new LintNodeGenerator();
+        workflow.jobs.build.steps.push(lintGen.generate());
+      }
+
+      // 8. Unit Tests (Optional)
+      if (this.config.enableTests) {
+        const testGen = new TestNodeGenerator();
+        workflow.jobs.build.steps.push(testGen.generate());
+      }
+
+      // 9. Build Application (Optional)
+      if (this.config.enableBuild) {
+        const buildGen = new BuildNodeGenerator();
+        workflow.jobs.build.steps.push(buildGen.generate());
+      }
+    } else if (this.config.language === 'python') {
+      const setupGen = new SetupPythonGenerator('3.11', this.config.enableInstall);
+      workflow.jobs.build.steps.push(...setupGen.generate());
+
+      // 7. Lint (Optional)
+      if (this.config.enableLint) {
+        const lintGen = new LintPythonGenerator();
+        workflow.jobs.build.steps.push(lintGen.generate());
+      }
+
+      // 8. Unit Tests (Optional)
+      if (this.config.enableTests) {
+        const testGen = new TestPythonGenerator();
+        workflow.jobs.build.steps.push(testGen.generate());
+      }
+
+      // 9. Build Application (Optional)
+      if (this.config.enableBuild) {
+        const buildGen = new BuildPythonGenerator();
+        workflow.jobs.build.steps.push(buildGen.generate());
+      }
+    }
 
     // 6. Registry Login Step
     const registryConfig = {
@@ -71,17 +130,17 @@ class WorkflowBuilder {
     };
 
     const registryLoginGen = new RegistryLoginGenerator(
-  this.config.registry,
-  registryConfig
-);
+      this.config.registry,
+      registryConfig
+    );
 
-const loginSteps = registryLoginGen.generate();
+    const loginSteps = registryLoginGen.generate();
 
-if (Array.isArray(loginSteps)) {
-  workflow.jobs.build.steps.push(...loginSteps);
-} else {
-  workflow.jobs.build.steps.push(loginSteps);
-}
+    if (Array.isArray(loginSteps)) {
+      workflow.jobs.build.steps.push(...loginSteps);
+    } else {
+      workflow.jobs.build.steps.push(loginSteps);
+    }
 
     // 6. Docker Build Step
     const dockerBuildGen = new DockerBuildGenerator(
