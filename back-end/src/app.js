@@ -4,7 +4,7 @@ const projectsRoutes = require('./modules/projects/projects.routes');
 const servicesRoutes = require('./modules/service/service.routes');
 const errorHandler = require('./core/middlewares/errorHandler');
 const githubRoutes = require('./modules/github/github.routes');
-
+const dockerizeRoutes = require('./modules/dockerize/dockerize.routes');
 const ciRoutes = require('./modules/ci/ci.routes');
 
 const cors = require("cors") ;
@@ -21,6 +21,7 @@ app.use('/auth', authRoutes);
 app.use('/projects', projectsRoutes);
 app.use('/services', servicesRoutes);
 app.use('/github', githubRoutes);
+app.use('/dockerize', dockerizeRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
