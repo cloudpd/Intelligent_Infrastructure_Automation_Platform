@@ -13,7 +13,16 @@ const DockerPushGenerator = require('./generators/docker-push.generator');
  */
 class WorkflowBuilder {
   constructor(config) {
-    this.config = config;
+    const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
+    this.config = {
+      pipeline_name: rawConfig.pipeline_name || rawConfig.pipelineName,
+      trigger_branch: rawConfig.trigger_branch || rawConfig.triggerBranch,
+      image_name: rawConfig.image_name || rawConfig.imageName,
+      registry: rawConfig.registry,
+      enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
+      dockerHubUsername: rawConfig.dockerHubUsername || rawConfig.docker_hub_username,
+      awsEcrRegion: rawConfig.awsEcrRegion || rawConfig.aws_ecr_region,
+    };
   }
 
   /**

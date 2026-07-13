@@ -13,7 +13,7 @@ router.use(authenticate);
 
 router.get('/:serviceId/ci/get', ciController.getCIConfigController);
 
-router.post('/:serviceId/ci/create', validateCIConfig, ciController.upsertCIConfigController);
+router.post('/:serviceId/ci', validateCIConfig, ciController.upsertCIConfigController);
 
 router.post("/:serviceId/ci/push", ciController.pushWorkflowToGithub);
 
