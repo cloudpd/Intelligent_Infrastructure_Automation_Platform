@@ -7,7 +7,7 @@ class LintNodeGenerator {
   generate() {
     return {
       name: 'Run Lint',
-      run: 'npm run lint',
+      run: 'npm run lint --if-present',
     };
   }
 }
