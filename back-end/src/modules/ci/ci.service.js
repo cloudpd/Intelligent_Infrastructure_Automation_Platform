@@ -7,6 +7,7 @@ const { Project } = require('../../modules/projects/projects.model');
 
 const { decrypt } = require('../../core/utils/encryption');
 const WorkflowBuilder = require('./ci.workflowBuilder');
+const { BuildConfig } = require('../dockerize/dockerize.model');
 
 const FILE_PATH_IN_REPO = ".github/workflows/deploy.yml";
 const githubApiBaseUrl = "https://api.github.com/repos";
@@ -60,9 +61,27 @@ function generateWorkflowYAML(config) {
   return builder.generateYAML();
 }
 
+/**
+ * Look up the language the user set in the Dockerize step.
+ * Returns 'node', 'python', or null if not found.
+ * @param {string} serviceId
+ * @returns {Promise<string|null>}
+ */
+async function getLanguageFromBuildConfig(serviceId) {
+  const buildConfig = await BuildConfig.findOne({ where: { service_id: serviceId } });
+  return buildConfig ? buildConfig.language : null;
+}
+
 async function pushWorkflowToGithub(userId, serviceId, config) {
-  const workflowYAML = generateWorkflowYAML(config);  
-  const contentBase64 = Buffer.from(workflowYAML).toString("base64");
+  // Get the language the user set in the Dockerize step
+  const language = await getLanguageFromBuildConfig(serviceId);
+
+  // Enrich the config with language before generating YAML
+  const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
+  const enrichedConfig = { ...rawConfig, language };
+
+  const workflowYAML = generateWorkflowYAML(enrichedConfig);
+  const contentBase64 = Buffer.from(workflowYAML).toString('base64');
 
   const service = await getServiceById(serviceId, userId);
   const { owner, repo } = parseGithubUrl(service.repository_url);
@@ -124,11 +143,12 @@ async function getExistingWorkflow(userId, serviceId) {
   };
 }
 
-module.exports = { 
-  generateWorkflowYAML, 
-  pushWorkflowToGithub, 
+module.exports = {
+  generateWorkflowYAML,
+  pushWorkflowToGithub,
   getExistingWorkflow,
   getServiceById,
   getPATTokenFromDB,
-  parseGithubUrl 
+  parseGithubUrl,
+  getLanguageFromBuildConfig,
 };

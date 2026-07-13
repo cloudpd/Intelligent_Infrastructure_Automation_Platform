@@ -105,6 +105,9 @@ async function previewWorkflowController(req, res, next) {
             throw new AppError('No CI configuration found for this service', 404);
         }
 
+        // Get the language the user set in the Dockerize step (no GitHub API call needed)
+        const language = await ciService.getLanguageFromBuildConfig(serviceId);
+
         // Build config object for generator
         const config = {
             serviceId,
@@ -115,6 +118,7 @@ async function previewWorkflowController(req, res, next) {
             enableTrivy: ciConfig.enable_trivy,
             dockerHubUsername: ciConfig.docker_hub_username,
             awsEcrRegion: ciConfig.aws_ecr_region,
+            language,
         };
 
         // Generate workflow YAML

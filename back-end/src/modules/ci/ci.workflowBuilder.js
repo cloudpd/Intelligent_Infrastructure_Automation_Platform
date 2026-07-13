@@ -6,6 +6,8 @@ const RegistryLoginGenerator = require('./generators/registry-login.generator');
 const DockerBuildGenerator = require('./generators/docker-build.generator');
 const TrivyGenerator = require('./generators/trivy.generator');
 const DockerPushGenerator = require('./generators/docker-push.generator');
+const SetupNodeGenerator = require('./generators/setup-node.generator');
+const SetupPythonGenerator = require('./generators/setup-python.generator');
 
 /**
  * Workflow Builder
@@ -22,6 +24,8 @@ class WorkflowBuilder {
       enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
       dockerHubUsername: rawConfig.dockerHubUsername || rawConfig.docker_hub_username,
       awsEcrRegion: rawConfig.awsEcrRegion || rawConfig.aws_ecr_region,
+      // Language from the BuildConfig table set during the Dockerize step
+      language: rawConfig.language || null,
     };
   }
 
@@ -31,8 +35,8 @@ class WorkflowBuilder {
    *  workflow configuration
    */
   build() {
-     console.log("WorkflowBuilder is being executed");
-     
+    console.log("WorkflowBuilder is being executed");
+
     const workflow = {};
 
     // 1. Header
@@ -50,7 +54,7 @@ class WorkflowBuilder {
       'security-events': 'write'
     };
 
-     console.log(workflow.permissions);
+    console.log(workflow.permissions);
 
     // 4. Jobs
     workflow.jobs = {
@@ -60,9 +64,18 @@ class WorkflowBuilder {
       },
     };
 
-    // 4. Checkout Step
+    // 5. Checkout Step
     const checkoutGen = new CheckoutStepGenerator();
     workflow.jobs.build.steps.push(checkoutGen.generate());
+
+    // 6. Setup Runtime & Install Dependencies (from BuildConfig.language)
+    if (this.config.language === 'node') {
+      const setupGen = new SetupNodeGenerator();
+      workflow.jobs.build.steps.push(...setupGen.generate());
+    } else if (this.config.language === 'python') {
+      const setupGen = new SetupPythonGenerator();
+      workflow.jobs.build.steps.push(...setupGen.generate());
+    }
 
     // 6. Registry Login Step
     const registryConfig = {
@@ -71,17 +84,17 @@ class WorkflowBuilder {
     };
 
     const registryLoginGen = new RegistryLoginGenerator(
-  this.config.registry,
-  registryConfig
-);
+      this.config.registry,
+      registryConfig
+    );
 
-const loginSteps = registryLoginGen.generate();
+    const loginSteps = registryLoginGen.generate();
 
-if (Array.isArray(loginSteps)) {
-  workflow.jobs.build.steps.push(...loginSteps);
-} else {
-  workflow.jobs.build.steps.push(loginSteps);
-}
+    if (Array.isArray(loginSteps)) {
+      workflow.jobs.build.steps.push(...loginSteps);
+    } else {
+      workflow.jobs.build.steps.push(loginSteps);
+    }
 
     // 6. Docker Build Step
     const dockerBuildGen = new DockerBuildGenerator(
