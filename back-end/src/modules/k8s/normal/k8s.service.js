@@ -9,6 +9,7 @@ const { KubernetesConfig } = require('./k8s.model');
 const { validateServiceOwnership } = require('./k8s.validation');
 const { buildManifests } = require('./generators/manifest.builder');
 
+
 const COMMIT_MESSAGE = 'Generate Kubernetes manifests using DevOps Platform';
 
 function toConfigRow(serviceId, wizard) {
@@ -156,6 +157,7 @@ async function generateKubernetesManifests(userId, serviceId, wizard) {
   }
 
   const token = await getPATTokenFromDB(userId, wizard.githubTokenId);
+    // const token =  await githubService.getDecryptedToken(userId, github_token_id);
   const { commitSha, pushed } = await cloneWriteCommitPush({
     repositoryUrl: service.repository_url,
     branch: service.branch,

@@ -13,18 +13,22 @@ const existingDockerfileSchema = Joi.object({
 });
 
 const generateDockerfileSchema = Joi.object({
-  service_id: Joi.string().uuid().required().messages({
-    'any.required': 'Service id is required',
-  }),
+  service_id: Joi.string().uuid().required(),
   github_token_id: Joi.string().uuid().required().messages({
     'any.required': 'Please select which GitHub token to use',
   }),
-  language: Joi.string().valid(...SUPPORTED_LANGUAGES).required().messages({
-    'any.only': `Language must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`,
+  language: Joi.string().valid(...SUPPORTED_LANGUAGES).required(),
+
+  base_image: Joi.string().trim().required().messages({
+    'string.empty': 'Base image is required',
   }),
-  dockerfile_content: Joi.string().min(1).required().messages({
-    'string.empty': 'Dockerfile content cannot be empty',
+  port: Joi.number().integer().min(1).max(65535).required().messages({
+    'number.base': 'Port must be a valid number',
   }),
+  run_command: Joi.string().trim().required().messages({
+    'string.empty': 'Run command is required',
+  }),
+
   target_path: Joi.string().trim().default('Dockerfile'),
 });
 

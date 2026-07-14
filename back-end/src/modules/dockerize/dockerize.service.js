@@ -3,6 +3,7 @@ const AppError = require('../../core/utils/AppError');
 const githubService = require('../github/github.service');
 const { Service } = require('../service/service.model');   
 const { Project } = require('../projects/projects.model');   
+const { renderDockerfile } = require('./dockerize.templates');
 
 async function getServiceOwnedByUser(userId, serviceId) {
   const service = await Service.findOne({
@@ -39,10 +40,21 @@ async function markExistingDockerfile(userId, { service_id, dockerfile_path }) {
 }
 
 async function generateAndPushDockerfile(userId, data) {
-  const { service_id, github_token_id, language, dockerfile_content, target_path } = data;
+  const { service_id, github_token_id, language, base_image, port, run_command, target_path } = data;
 
   const service = await getServiceOwnedByUser(userId, service_id);
   if (!service) throw new AppError('Service not found', 404);
+
+  const runCommandArray = run_command
+    .split(' ')
+    .map((part) => `"${part}"`)
+    .join(', ');
+
+  const dockerfileContent = renderDockerfile(language, {
+    BASE_IMAGE: base_image,
+    PORT: String(port),
+    RUN_COMMAND: runCommandArray,
+  });
 
   const accessToken = await githubService.getDecryptedToken(userId, github_token_id);
   const { owner, repo } = githubService.parseRepoUrl(service.repository_url);
@@ -52,7 +64,7 @@ async function generateAndPushDockerfile(userId, data) {
     owner,
     repo,
     path: target_path,
-    content: dockerfile_content,
+    content: dockerfileContent,
     branch: service.branch || 'main',
     commitMessage: `Add Dockerfile via DeployHub (${language})`,
   });

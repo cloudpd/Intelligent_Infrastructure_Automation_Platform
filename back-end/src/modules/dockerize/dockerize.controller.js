@@ -1,5 +1,5 @@
 const dockerizeService = require('./dockerize.service');
-const { getDefaultDockerfile } = require('./dockerize.templates');
+const { getDefaultsForLanguage } = require('./dockerize.templates');
 
 async function markExistingController(req, res, next) {
   try {
@@ -10,11 +10,11 @@ async function markExistingController(req, res, next) {
   }
 }
 
-async function getTemplateController(req, res, next) {
+async function getLanguageDefaultsController(req, res, next) {
   try {
     const { language } = req.params;
-    const dockerfile = getDefaultDockerfile(language);
-    res.status(200).json({ success: true, dockerfile });
+    const defaults = getDefaultsForLanguage(language);
+    res.status(200).json({ success: true, defaults });
   } catch (err) {
     next(err);
   }
@@ -41,7 +41,7 @@ async function getBuildConfigController(req, res, next) {
 
 module.exports = {
   markExistingController,
-  getTemplateController,
+  getLanguageDefaultsController,
   generateController,
   getBuildConfigController,
 };

@@ -4,7 +4,7 @@ const validate = require('../../core/middlewares/validate');
 const { existingDockerfileSchema, generateDockerfileSchema } = require('./dockerize.validation');
 const {
   markExistingController,
-  getTemplateController,
+  getLanguageDefaultsController,
   generateController,
   getBuildConfigController,
 } = require('./dockerize.controller');
@@ -14,7 +14,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post('/existing', validate(existingDockerfileSchema), markExistingController);
-router.get('/template/:language', getTemplateController);
+router.get('/defaults/:language', getLanguageDefaultsController); // was /template/:language
 router.post('/generate', validate(generateDockerfileSchema), generateController);
 router.get('/build-config/:serviceId', getBuildConfigController);
 

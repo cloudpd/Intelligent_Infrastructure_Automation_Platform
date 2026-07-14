@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import reloadIcon from '../../finalProject assets/reload.jpg';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const LANGUAGES = [
@@ -8,19 +9,23 @@ const LANGUAGES = [
 
 export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
   const [language, setLanguage] = useState('');
-  const [dockerfileContent, setDockerfileContent] = useState('');
+
+  const [baseImage, setBaseImage] = useState('');
+  const [port, setPort] = useState('');
+  const [runCommand, setRunCommand] = useState('');
   const [targetPath, setTargetPath] = useState('Dockerfile');
+
   const [tokens, setTokens] = useState([]);
   const [githubTokenId, setGithubTokenId] = useState('');
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [reloadTokens, setReloadTokens] = useState(false);
 
   useEffect(() => {
     fetchTokens();
-  }, [reloadTokens]);
+  }, []);
 
   function fetchTokens() {
     const token = localStorage.getItem('token');
@@ -38,23 +43,35 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
   function handleLanguageSelect(lang) {
     setLanguage(lang);
     setError('');
-    setLoadingTemplate(true);
+    setLoadingDefaults(true);
 
     const token = localStorage.getItem('token');
 
-    fetch(`${API_URL}/dockerize/template/${lang}`, {
+    fetch(`${API_URL}/dockerize/defaults/${lang}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
-        if (!res.ok) throw new Error('Failed to load default Dockerfile');
+        if (!res.ok) throw new Error('Failed to load defaults');
         return res.json();
       })
-      .then((data) => setDockerfileContent(data.dockerfile))
-      .catch((err) => {
-        console.error('Failed to fetch template:', err);
-        setError('Could not load the default Dockerfile for this language.');
+      .then((data) => {
+        setBaseImage(data.defaults.BASE_IMAGE);
+        setPort(data.defaults.PORT);
+        // defaults come back as `"node", "index.js"` — show the user a plain command instead
+        setRunCommand(data.defaults.RUN_COMMAND.replace(/"/g, '').replaceAll(', ', ' '));
       })
-      .finally(() => setLoadingTemplate(false));
+      .catch((err) => {
+        console.error('Failed to fetch defaults:', err);
+        setError('Could not load defaults for this language.');
+      })
+      .finally(() => setLoadingDefaults(false));
+  }
+
+  function handleChangeLanguage() {
+    setLanguage('');
+    setBaseImage('');
+    setPort('');
+    setRunCommand('');
   }
 
   async function handleSubmit(event) {
@@ -75,7 +92,9 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
           service_id: serviceId,
           github_token_id: githubTokenId,
           language,
-          dockerfile_content: dockerfileContent,
+          base_image: baseImage,
+          port: Number(port),
+          run_command: runCommand,
           target_path: targetPath,
         }),
       });
@@ -98,7 +117,6 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
     <div className='add-project-modal__content dockerize-form-panel'>
       <h2>Generate a Dockerfile</h2>
 
-      {/* Step: pick a language */}
       {!language && (
         <div className='dockerize-language-grid'>
           {LANGUAGES.map((lang) => (
@@ -113,7 +131,6 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
         </div>
       )}
 
-      {/* Step: review/edit + pick a token + confirm target path */}
       {language && (
         <form className='add-project-form' onSubmit={handleSubmit}>
           <label>
@@ -121,20 +138,46 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
             <input type='text' value={LANGUAGES.find((l) => l.value === language)?.label} disabled />
           </label>
 
-          <label>
-            Dockerfile (edit if you'd like to customize it)
-            {loadingTemplate ? (
-              <p className='project-label'>Loading default template...</p>
-            ) : (
-              <textarea
-                className='dockerize-editor'
-                value={dockerfileContent}
-                onChange={(e) => setDockerfileContent(e.target.value)}
-                rows={18}
-                spellCheck={false}
-              />
-            )}
-          </label>
+          {loadingDefaults ? (
+            <p className='project-label'>Loading defaults...</p>
+          ) : (
+            <>
+              <label>
+                Base image
+                <input
+                  type='text'
+                  value={baseImage}
+                  onChange={(e) => setBaseImage(e.target.value)}
+                  required
+                  placeholder='e.g. node:22-alpine'
+                />
+              </label>
+
+              <label>
+                Port
+                <input
+                  type='number'
+                  value={port}
+                  onChange={(e) => setPort(e.target.value)}
+                  required
+                  min={1}
+                  max={65535}
+                  placeholder='e.g. 3000'
+                />
+              </label>
+
+              <label>
+                Run command
+                <input
+                  type='text'
+                  value={runCommand}
+                  onChange={(e) => setRunCommand(e.target.value)}
+                  required
+                  placeholder='e.g. node index.js'
+                />
+              </label>
+            </>
+          )}
 
           <label>
             Path in repo to push to
@@ -149,10 +192,9 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
 
           <label>
             <div className='dockerize-token-label-row'>
-              <span style={{ marginRight: '0.5rem' }}>GitHub token to use</span>
+              <span>GitHub token to use</span>
               
             </div>
-
             {loadingTokens ? (
               <p className='project-label'>Loading your tokens...</p>
             ) : tokens.length === 0 ? (
@@ -161,7 +203,7 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
               </p>
             ) : (
               <div>
-                <select value={githubTokenId} onChange={(e) => setGithubTokenId(e.target.value)} required style={{width: '300px', marginRight: '0.5rem', height: '2rem'}}>
+                <select value={githubTokenId} onChange={(e) => setGithubTokenId(e.target.value)} required>
                   <option value=''>Select a token...</option>
                   {tokens.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -173,15 +215,14 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
                   type='button'
                   className='dockerize-reload-btn'
                   title='Refresh token list'
-                  onClick={() => setReloadTokens((prev) => !prev)}
+                  onClick={fetchTokens}
                 >
+                  {/* <img src={reloadIcon} alt='Reload' width='20' height='20' /> */}
                   <i className='fa-solid fa-rotate'></i>
                 </button>
-              </div>
-              
-            )}
-
-            <div>
+                </div>
+              )}
+              <div>
               <a href='/github-tokens' target='_blank' rel='noopener noreferrer'>
                 Create One?
               </a>
@@ -191,13 +232,13 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
           {error && <div className='project-alert project-alert--error'>{error}</div>}
 
           <div className='add-project-form__actions'>
-            <button type='button' className='project-button project-button--ghost' onClick={() => setLanguage('')} disabled={submitting}>
+            <button type='button' className='project-button project-button--ghost' onClick={handleChangeLanguage} disabled={submitting}>
               Change language
             </button>
             <button
               type='submit'
               className='project-button project-button--primary'
-              disabled={submitting || !dockerfileContent.trim() || !githubTokenId}
+              disabled={submitting || !baseImage.trim() || !port || !runCommand.trim() || !githubTokenId}
             >
               {submitting ? 'Pushing to GitHub...' : 'Push Dockerfile & Continue'}
             </button>
