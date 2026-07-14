@@ -19,10 +19,19 @@ export default function ServiceCard({ service, projectId }) {
           Go through the deployment process
         </Link>
 
-          <Link
-            className='project-button project-button--primary service-deploy-button'
-            to={`/projects/${projectId}/services/${id}/k8s`}
-          >add k8s</Link>
+        <Link
+          className='project-button project-button--primary service-deploy-button'
+          to={`/projects/${projectId}/services/${id}/ci`}
+        >
+          Add CI
+        </Link>
+
+        <Link
+          className='project-button project-button--primary service-deploy-button'
+          to={`/projects/${projectId}/services/${id}/k8s`}
+        >
+          Add K8s
+        </Link>
       </div>
     </div>
   );

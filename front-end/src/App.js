@@ -31,6 +31,7 @@ import DockerizePage from './Components/Dockerize/DockerizePage.jsx';
 // import ProductSubCategorey from './Components/Categories/ProductSubCategorey';
 // import ProductBrand from './Components/Brands/ProductBrand';
 import KubernetesWizard from './Components/Kubernetes/KubernetesWizard.jsx';
+import CIServicePage from './Components/ci-service/CIServicePage.jsx';
 
 
 
@@ -92,6 +93,12 @@ function App() {
           path: '/services/:serviceId/dockerize', element:
             <ProtectedRoute>
               <DockerizePage />
+            </ProtectedRoute>
+        },
+        {
+          path: '/projects/:projectId/services/:serviceId/ci', element:
+            <ProtectedRoute>
+              <CIServicePage />
             </ProtectedRoute>
         },
         {
