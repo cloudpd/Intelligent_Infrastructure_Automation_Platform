@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ServiceCard({ service }) {
+export default function ServiceCard({ service, projectId }) {
   const id = service.id || service._id;
   const name = service.name || 'Untitled service';
   const repoUrl = service.repository_url || '';
@@ -18,6 +18,11 @@ export default function ServiceCard({ service }) {
         <Link to={`/services/${id}/dockerize`} className='project-button project-button--primary service-deploy-button'>
           Go through the deployment process
         </Link>
+
+          <Link
+            className='project-button project-button--primary service-deploy-button'
+            to={`/projects/${projectId}/services/${id}/k8s`}
+          >add k8s</Link>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ const errorHandler = require('./core/middlewares/errorHandler');
 const githubRoutes = require('./modules/github/github.routes');
 const dockerizeRoutes = require('./modules/dockerize/dockerize.routes');
 const ciRoutes = require('./modules/ci/ci.routes');
+const k8sRoutes = require('./modules/k8s/normal/k8s.routes');
 
 const cors = require("cors") ;
 const app = express();
@@ -16,6 +17,8 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/services', ciRoutes);
+
+app.use('/services', k8sRoutes);
 
 app.use('/auth', authRoutes);
 app.use('/projects', projectsRoutes);
