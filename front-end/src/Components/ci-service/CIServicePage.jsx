@@ -144,6 +144,14 @@ export default function CIServicePage() {
                 errors.AWS_SECRET_ACCESS_KEY = 'AWS secret access key is required.';
             }
         }
+        else {
+            if (!secrets.DOCKER_USERNAME.trim()) {
+                errors.DOCKER_USERNAME = 'Docker username is required.';
+            }
+            if (!secrets.DOCKER_PASSWORD.trim()) {
+                errors.DOCKER_PASSWORD = 'Docker password is required.';
+            }
+        }
         setSecretErrors(errors);
         return Object.keys(errors).length === 0;
     };
