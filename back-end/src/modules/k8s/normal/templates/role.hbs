@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{appName}}-role
+  namespace: {{namespace}}
+  labels:
+    app: {{appName}}
+rules:
+{{#each rules}}
+  - apiGroups: [{{#each apiGroups}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+    resources: [{{#each resources}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+    verbs: [{{#each verbs}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+{{/each}}

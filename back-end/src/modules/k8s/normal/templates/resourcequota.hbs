@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{appName}}-quota
+  namespace: {{namespace}}
+  labels:
+    app: {{appName}}
+spec:
+  hard:
+    requests.cpu: {{quota.cpuRequests}}
+    requests.memory: {{quota.memoryRequests}}
+    limits.cpu: {{quota.cpuLimits}}
+    limits.memory: {{quota.memoryLimits}}
+{{#if quota.maxPods}}
+    pods: "{{quota.maxPods}}"
+{{/if}}
