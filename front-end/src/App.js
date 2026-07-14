@@ -30,7 +30,7 @@ import DockerizePage from './Components/Dockerize/DockerizePage.jsx';
 // import ProductCategory from './Components/Categories/ProductCategory';
 // import ProductSubCategorey from './Components/Categories/ProductSubCategorey';
 // import ProductBrand from './Components/Brands/ProductBrand';
-
+import KubernetesWizard from './Components/Kubernetes/KubernetesWizard.jsx';
 
 
 
@@ -92,6 +92,18 @@ function App() {
           path: '/services/:serviceId/dockerize', element:
             <ProtectedRoute>
               <DockerizePage />
+            </ProtectedRoute>
+        },
+        {
+          path: '/projects/:projectId/services/:serviceId/k8s', element:
+            <ProtectedRoute>
+              <KubernetesWizard />
+            </ProtectedRoute>
+        },
+                {
+          path: '/k8s', element:
+            <ProtectedRoute>
+              <KubernetesWizard />
             </ProtectedRoute>
         },
                 // {

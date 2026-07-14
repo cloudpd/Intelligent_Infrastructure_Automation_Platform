@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{appName}}-config
+  namespace: {{namespace}}
+  labels:
+    app: {{appName}}
+data:
+{{#each data}}
+  {{@key}}: "{{this}}"
+{{/each}}
