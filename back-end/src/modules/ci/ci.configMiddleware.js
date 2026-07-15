@@ -18,7 +18,6 @@ function validateCIConfigMiddleware(req, res, next) {
     const enableLint = body.enableLint !== undefined ? body.enableLint : body.enablelint;
     const enableTests = body.enableTests !== undefined ? body.enableTests : body.enabletests;
     const enableBuild = body.enableBuild !== undefined ? body.enableBuild : body.enablebuild;
-    const enableInstall = body.enableInstall !== undefined ? body.enableInstall : body.enableinstall;
 
     const serviceId = req.params.serviceId || body.serviceId;
 
@@ -36,7 +35,6 @@ function validateCIConfigMiddleware(req, res, next) {
       enableLint,
       enableTests,
       enableBuild,
-      enableInstall,
       awsEcrRegion,
     };
 

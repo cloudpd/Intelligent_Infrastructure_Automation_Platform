@@ -50,9 +50,6 @@ const ciConfigSchema = Joi.object({
   enableBuild: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Build must be true or false',
   }),
-  enableInstall: Joi.boolean().default(true).messages({
-    'boolean.base': 'Enable Install must be true or false',
-  }),
   awsEcrRegion: Joi.string().optional().allow(null, ''),
 }).unknown(false);
 
