@@ -58,10 +58,7 @@ const CIConfig = sequelize.define(
       defaultValue: true,
     },
 
-    aws_ecr_region: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
+
   },
   {
     tableName: 'ci_configs',

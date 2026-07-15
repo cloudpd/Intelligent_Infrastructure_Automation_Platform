@@ -31,8 +31,6 @@ async function getCIConfigController(req, res, next) {
                 enableTests: config.enable_tests,
                 enableBuild: config.enable_build,
                 enableInstall: config.enable_install,
-                dockerHubUsername: config.docker_hub_username,
-                awsEcrRegion: config.aws_ecr_region,
             },
         });
     } catch (err) {
@@ -62,8 +60,7 @@ async function upsertCIConfigController(req, res, next) {
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
                 enable_install: config.enableInstall,
-                docker_hub_username: config.dockerHubUsername,
-                aws_ecr_region: config.awsEcrRegion,
+
             },
         });
 
@@ -78,8 +75,6 @@ async function upsertCIConfigController(req, res, next) {
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
                 enable_install: config.enableInstall,
-                docker_hub_username: config.dockerHubUsername,
-                aws_ecr_region: config.awsEcrRegion,
             });
         }
 
@@ -96,8 +91,7 @@ async function upsertCIConfigController(req, res, next) {
                 enableTests: ciConfig.enable_tests,
                 enableBuild: ciConfig.enable_build,
                 enableInstall: ciConfig.enable_install,
-                dockerHubUsername: ciConfig.docker_hub_username,
-                awsEcrRegion: ciConfig.aws_ecr_region,
+
             },
         });
     } catch (err) {
@@ -121,7 +115,7 @@ async function previewWorkflowController(req, res, next) {
             throw new AppError('No CI configuration found for this service', 404);
         }
 
-        // Get the language the user set in the Dockerize step (no GitHub API call needed)
+
         const language = await ciService.getLanguageFromBuildConfig(serviceId);
 
         // Build config object for generator
@@ -136,12 +130,10 @@ async function previewWorkflowController(req, res, next) {
             enableTests: ciConfig.enable_tests,
             enableBuild: ciConfig.enable_build,
             enableInstall: ciConfig.enable_install,
-            dockerHubUsername: ciConfig.docker_hub_username,
-            awsEcrRegion: ciConfig.aws_ecr_region,
             language,
         };
 
-        // Generate workflow YAML
+
         const workflowYAML = ciService.generateWorkflowYAML(config);
 
         // Return preview and the expected workflow file path in the repository y2ma han3mlo download y2ma ntl3o yml file w khalas

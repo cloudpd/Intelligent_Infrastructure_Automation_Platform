@@ -28,8 +28,6 @@ class WorkflowBuilder {
       image_name: rawConfig.image_name || rawConfig.imageName,
       registry: rawConfig.registry,
       enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
-      dockerHubUsername: rawConfig.dockerHubUsername || rawConfig.docker_hub_username,
-      awsEcrRegion: rawConfig.awsEcrRegion || rawConfig.aws_ecr_region,
       // Language from the BuildConfig table set during the Dockerize step
       language: rawConfig.language || null,
       enableLint: rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : true),
