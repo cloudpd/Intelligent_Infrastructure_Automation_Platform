@@ -41,17 +41,14 @@ const ciConfigSchema = Joi.object({
   enableTrivy: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Trivy must be true or false',
   }),
-  enableLint: Joi.boolean().default(true).messages({
+  enableLint: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Lint must be true or false',
   }),
-  enableTests: Joi.boolean().default(true).messages({
+  enableTests: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Tests must be true or false',
   }),
   enableBuild: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Build must be true or false',
-  }),
-  enableInstall: Joi.boolean().default(true).messages({
-    'boolean.base': 'Enable Install must be true or false',
   }),
   awsEcrRegion: Joi.string().optional().allow(null, ''),
 }).unknown(false);
