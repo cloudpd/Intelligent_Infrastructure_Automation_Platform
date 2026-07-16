@@ -190,7 +190,7 @@ export default function CIServicePage() {
         }
 
         try {
-            const response = await fetch(`${API_URL}/services/${serviceId}/ci`, {
+            const response = await fetch(`${API_URL}/services/${serviceId}/ci/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders },
                 body: JSON.stringify({
@@ -242,6 +242,7 @@ export default function CIServicePage() {
                 body: JSON.stringify({}),
             });
             const data = await response.json().catch(() => null);
+            console.log(data);
             if (!response.ok) throw new Error(data?.message || 'Unable to push workflow.');
             setStatusMessage('Workflow pushed to GitHub.');
         } catch (err) {
