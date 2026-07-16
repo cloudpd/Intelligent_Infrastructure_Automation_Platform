@@ -173,7 +173,7 @@ function App() {
       <AuthProvider>
         {/* <CartContextProvider> */}
           <RouterProvider router={routes} />
-          <ToastContainer />
+          {/* <ToastContainer /> */}
         {/* </CartContextProvider> */}
       </AuthProvider>
     </>

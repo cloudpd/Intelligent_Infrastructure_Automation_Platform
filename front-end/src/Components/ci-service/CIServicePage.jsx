@@ -7,11 +7,6 @@ import CIForm from './CIForm';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const emptySecretState = {
-    DOCKER_USERNAME: '',
-    DOCKER_PASSWORD: '',
-};
-
 export default function CIServicePage() {
     const { projectId, serviceId } = useParams();
     const [service, setService] = useState(null);
@@ -35,7 +30,10 @@ export default function CIServicePage() {
         enableBuild: false,
         awsEcrRegion: '',
     });
-    const [secrets, setSecrets] = useState(emptySecretState);
+    // NOTE: no more shared "emptySecretState" constant with hardcoded
+    // DOCKER_USERNAME/DOCKER_PASSWORD keys. Starting from {} means whatever
+    // registry is selected only ever populates the keys relevant to it.
+    const [secrets, setSecrets] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [secretErrors, setSecretErrors] = useState({});
     const [saveError, setSaveError] = useState('');
@@ -97,7 +95,11 @@ export default function CIServicePage() {
         setCiConfigSaved(false);
         if (field === 'registry') {
             setSecretErrors({});
-            setSecrets(emptySecretState);
+            // Fully reset secrets state on registry change — previously this
+            // reset to a constant that always contained DOCKER_USERNAME /
+            // DOCKER_PASSWORD keys, so switching to aws-ecr still left those
+            // (empty) keys sitting in state and later in the request body.
+            setSecrets({});
         }
     };
 
@@ -144,15 +146,35 @@ export default function CIServicePage() {
             }
         }
         else {
-            if (!secrets.DOCKER_USERNAME.trim()) {
+            if (!secrets.DOCKER_USERNAME?.trim()) {
                 errors.DOCKER_USERNAME = 'Docker username is required.';
             }
-            if (!secrets.DOCKER_PASSWORD.trim()) {
+            if (!secrets.DOCKER_PASSWORD?.trim()) {
                 errors.DOCKER_PASSWORD = 'Docker password is required.';
             }
         }
         setSecretErrors(errors);
         return Object.keys(errors).length === 0;
+    };
+
+    // Builds the payload sent to the backend, containing only the keys
+    // relevant to the currently selected registry. This is what actually
+    // fixes the bug: previously the whole `secrets` state object (which
+    // could contain leftover keys from a different registry) was sent
+    // as-is.
+    const buildSecretsPayload = () => {
+        if (config.registry === 'aws-ecr') {
+            return {
+                AWS_ACCOUNT_ID: secrets.AWS_ACCOUNT_ID,
+                AWS_ACCESS_KEY_ID: secrets.AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: secrets.AWS_SECRET_ACCESS_KEY,
+                AWS_REGION: config.awsEcrRegion,
+            };
+        }
+        return {
+            DOCKER_USERNAME: secrets.DOCKER_USERNAME,
+            DOCKER_PASSWORD: secrets.DOCKER_PASSWORD,
+        };
     };
 
     const handleSaveConfig = async (event) => {
@@ -253,7 +275,7 @@ export default function CIServicePage() {
                 headers: { 'Content-Type': 'application/json', ...authHeaders },
                 body: JSON.stringify({
                     registry: config.registry === 'aws-ecr' ? 'aws-ecr' : 'docker',
-                    secrets,
+                    secrets: buildSecretsPayload(),
                 }),
             });
             const data = await response.json().catch(() => null);
