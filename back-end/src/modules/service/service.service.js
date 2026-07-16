@@ -98,10 +98,24 @@ async function deleteService(serviceId, userId) {
   await service.destroy();
 }
 
+async function getAllServices(userId) {
+
+  const services = await Service.findAll({
+    include: [{
+      model: Project,
+      as: 'project',
+      where: { owner_id: userId },
+    }],
+    order: [['createdAt', 'DESC']],
+  });
+  return services;
+}
+
 module.exports = {
   createService,
   getServiceById,
   getProjectServices,
   updateService,
   deleteService,
+  getAllServices,
 };

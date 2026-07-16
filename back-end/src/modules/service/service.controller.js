@@ -65,6 +65,19 @@ async function updateServiceController(req, res, next) {
   }
 }
 
+async function getAllServicesController(req, res, next) {
+  try {
+    const services = await servicesService.getAllServices(req.user.id);
+    res.status(200).json({
+      success: true,
+      count: services.length,
+      services,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function deleteServiceController(req, res, next) {
   try {
     const { id } = req.params;
@@ -84,4 +97,5 @@ module.exports = {
   getProjectServicesController,
   updateServiceController,
   deleteServiceController,
+  getAllServicesController
 };
