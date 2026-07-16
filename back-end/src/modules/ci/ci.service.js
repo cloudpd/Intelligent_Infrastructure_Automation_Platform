@@ -4,6 +4,7 @@ const AppError = require('../../core/utils/AppError');
 const { GithubToken } = require('../../modules/github/github.model');
 const { Service } = require('../../modules/service/service.model');
 const { Project } = require('../../modules/projects/projects.model');
+const { CIConfig } = require('./ci.model');
 
 const { decrypt } = require('../../core/utils/encryption');
 const WorkflowBuilder = require('./ci.workflowBuilder');
@@ -83,6 +84,8 @@ async function pushWorkflowToGithub(userId, serviceId) {
   // Get the language the user set in the Dockerize step
   const language = await getLanguageFromBuildConfig(serviceId);
   const config = await getCIConfig(serviceId);
+  console.log("=================================================");
+  console.log(config);
 
   // Enrich the config with language before generating YAML
   const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
