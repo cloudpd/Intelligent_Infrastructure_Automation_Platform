@@ -22,8 +22,8 @@ const BuildPythonGenerator = require('./generators/build-python.generator');
 class WorkflowBuilder {
   constructor(config) {
     const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
-    const enableLint = rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : true);
-    const enableTests = rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : true);
+    const enableLint = rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : false);
+    const enableTests = rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : false);
     const enableBuild = rawConfig.enable_build !== undefined ? rawConfig.enable_build : (rawConfig.enableBuild !== undefined ? rawConfig.enableBuild : false);
     const enableInstall = !!(enableLint || enableTests || enableBuild);
 
