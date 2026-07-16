@@ -41,11 +41,11 @@ const CIConfig = sequelize.define(
     },
     enable_lint: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
     },
     enable_tests: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
     },
 
     enable_build: {
