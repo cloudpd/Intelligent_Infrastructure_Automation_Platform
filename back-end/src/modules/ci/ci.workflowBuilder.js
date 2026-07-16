@@ -22,6 +22,11 @@ const BuildPythonGenerator = require('./generators/build-python.generator');
 class WorkflowBuilder {
   constructor(config) {
     const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
+    const enableLint = rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : true);
+    const enableTests = rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : true);
+    const enableBuild = rawConfig.enable_build !== undefined ? rawConfig.enable_build : (rawConfig.enableBuild !== undefined ? rawConfig.enableBuild : false);
+    const enableInstall = !!(enableLint || enableTests || enableBuild);
+
     this.config = {
       pipeline_name: rawConfig.pipeline_name || rawConfig.pipelineName,
       trigger_branch: rawConfig.trigger_branch || rawConfig.triggerBranch,
@@ -30,10 +35,10 @@ class WorkflowBuilder {
       enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
       // Language from the BuildConfig table set during the Dockerize step
       language: rawConfig.language || null,
-      enableLint: rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : true),
-      enableTests: rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : true),
-      enableBuild: rawConfig.enable_build !== undefined ? rawConfig.enable_build : (rawConfig.enableBuild !== undefined ? rawConfig.enableBuild : false),
-      enableInstall: rawConfig.enable_install !== undefined ? rawConfig.enable_install : (rawConfig.enableInstall !== undefined ? rawConfig.enableInstall : true),
+      enableLint,
+      enableTests,
+      enableBuild,
+      enableInstall,
     };
   }
 

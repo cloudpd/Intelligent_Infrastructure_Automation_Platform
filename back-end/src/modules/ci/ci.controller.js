@@ -30,7 +30,6 @@ async function getCIConfigController(req, res, next) {
                 enableLint: config.enable_lint,
                 enableTests: config.enable_tests,
                 enableBuild: config.enable_build,
-                enableInstall: config.enable_install,
             },
         });
     } catch (err) {
@@ -59,8 +58,6 @@ async function upsertCIConfigController(req, res, next) {
                 enable_lint: config.enableLint,
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
-                enable_install: config.enableInstall,
-
             },
         });
 
@@ -74,7 +71,6 @@ async function upsertCIConfigController(req, res, next) {
                 enable_lint: config.enableLint,
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
-                enable_install: config.enableInstall,
             });
         }
 
@@ -90,8 +86,6 @@ async function upsertCIConfigController(req, res, next) {
                 enableLint: ciConfig.enable_lint,
                 enableTests: ciConfig.enable_tests,
                 enableBuild: ciConfig.enable_build,
-                enableInstall: ciConfig.enable_install,
-
             },
         });
     } catch (err) {
@@ -129,7 +123,6 @@ async function previewWorkflowController(req, res, next) {
             enableLint: ciConfig.enable_lint,
             enableTests: ciConfig.enable_tests,
             enableBuild: ciConfig.enable_build,
-            enableInstall: ciConfig.enable_install,
             language,
         };
 
