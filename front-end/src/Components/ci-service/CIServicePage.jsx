@@ -30,10 +30,9 @@ export default function CIServicePage() {
         registry: 'docker-hub',
         imageName: '',
         enableTrivy: false,
-        enableLint: true,
-        enableTests: true,
+        enableLint: false,
+        enableTests: false,
         enableBuild: false,
-        enableInstall: true,
         awsEcrRegion: '',
     });
     const [secrets, setSecrets] = useState(emptySecretState);
