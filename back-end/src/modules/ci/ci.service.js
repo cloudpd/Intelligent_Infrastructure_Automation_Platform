@@ -12,6 +12,13 @@ const { BuildConfig } = require('../dockerize/dockerize.model');
 const FILE_PATH_IN_REPO = ".github/workflows/deploy.yml";
 const githubApiBaseUrl = "https://api.github.com/repos";
 
+
+async function getCIConfig(serviceId) {
+    const config = await CIConfig.findOne({ where: { service_id: serviceId } });
+    if (!config) throw new AppError('No CI configuration found for this service', 404);
+    return config;
+}
+
 function parseGithubUrl(repositoryUrl) {
   const cleanUrl = repositoryUrl.replace(/\.git$/, "");
   const parts = cleanUrl.split("/");
@@ -72,9 +79,10 @@ async function getLanguageFromBuildConfig(serviceId) {
   return buildConfig ? buildConfig.language : null;
 }
 
-async function pushWorkflowToGithub(userId, serviceId, config) {
+async function pushWorkflowToGithub(userId, serviceId) {
   // Get the language the user set in the Dockerize step
   const language = await getLanguageFromBuildConfig(serviceId);
+  const config = await getCIConfig(serviceId);
 
   // Enrich the config with language before generating YAML
   const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;

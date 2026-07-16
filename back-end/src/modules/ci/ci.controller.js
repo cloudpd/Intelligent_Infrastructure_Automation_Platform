@@ -178,25 +178,22 @@ async function deleteCIConfigController(req, res, next) {
 
 
 async function pushWorkflowToGithub(req, res, next) {
-    const { serviceId } = req.params;
-    const userId = req.user.id;
-    const config = await CIConfig.findOne({
-        where: { service_id: serviceId },
-    });
-    if (!config) {
-        return res.status(404).json({
-            success: false,
-            message: 'No CI configuration found for this service',
-        });
-    }
-    const result = await ciService.pushWorkflowToGithub(userId, serviceId, config);
-    res.status(200).json({
-        success: true,
-        message: 'Workflow pushed to GitHub successfully',
-        result,
-    });
-}
+    try {
+        const { serviceId } = req.params;
+        const userId = req.user.id;
 
+        await validateRepository(userId, serviceId);
+        const result = await ciService.pushWorkflowToGithub(userId, serviceId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Workflow pushed to GitHub successfully',
+            result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
 
 async function pushSecrets(req, res, next) {
     try {
