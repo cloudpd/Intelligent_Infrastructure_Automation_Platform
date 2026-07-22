@@ -7,6 +7,7 @@ const githubRoutes = require('./modules/github/github.routes');
 const dockerizeRoutes = require('./modules/dockerize/dockerize.routes');
 const ciRoutes = require('./modules/ci/ci.routes');
 const k8sRoutes = require('./modules/k8s/normal/k8s.routes');
+const infraNetworkRoutes = require('./modules/infra/network/network.routes');
 
 const cors = require("cors") ;
 const app = express();
@@ -25,6 +26,7 @@ app.use('/projects', projectsRoutes);
 app.use('/services', servicesRoutes);
 app.use('/github', githubRoutes);
 app.use('/dockerize', dockerizeRoutes);
+app.use('/infra/network', infraNetworkRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
