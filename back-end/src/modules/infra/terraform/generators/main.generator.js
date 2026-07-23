@@ -19,21 +19,7 @@ function renderSnippet(name, data) {
  * — main.generator.js itself doesn't need to change shape, only grow this list.
  */
 function generateMainTf({ network, ecr }) {
-=======
- * `network` and `eks` are wired up. Adding ECR/RDS later is just:
- *   if (ecr) blocks.push(renderSnippet('ecr', ecr));
- * with a matching ecr.hbs snippet file — main.generator.js itself doesn't
- * need to change shape, only grow this list.
- *
- * `eks` is intentionally rendered *after* `network` — eks.hbs contains
- * literal references to `module.network.*`, so the network block must
- * appear earlier in the emitted file. `eks` also can never be generated
- * without `network`: the eks module has no way to build its own VPC, so
- * that combination is a hard configuration error rather than a partial
- * (broken) main.tf.
- */
-function generateMainTf({ network, eks }) {
->>>>>>> a420867 (add terraform not complete)
+
   const blocks = [];
 
   if (eks && !network) {
@@ -44,13 +30,10 @@ function generateMainTf({ network, eks }) {
     blocks.push(renderSnippet('network', network));
   }
 
-<<<<<<< HEAD
+
   if (ecr) {
     blocks.push(renderSnippet('ecr', ecr));
-=======
-  if (eks) {
-    blocks.push(renderSnippet('eks', eks));
->>>>>>> a420867 (add terraform not complete)
+
   }
 
   return blocks.join('\n\n');

@@ -9,7 +9,7 @@ const { generateOutputsTf } = require('./generators/outputs.generator');
 const TEMPLATE_DIR = path.join(__dirname, 'template');
 
 /**
-<<<<<<< HEAD
+
  * Returns backend.tf content.
  * If LOCAL_TF_BACKEND=true in env, uses a local file backend (no S3 needed).
  * This is only for local development — always use S3 in production.
@@ -31,12 +31,7 @@ function buildBackendTf(templateData) {
  * the simplified network config: { name, region, cidr }.
  * Everything else is fixed inside modules/network/main.tf itself.
  */
-=======
- * Builds the full set of Terraform files for one service/environment from
- * the fully-simplified network config: { name, region, cidr }.
- * Everything else is fixed inside modules/network/main.tf itself.
- */
->>>>>>> c9c2441 (add terraform not complete)
+
 function generateNetworkFiles({ serviceSlug, environment, networkConfig }) {
   if (!networkConfig || !networkConfig.cidr) {
     throw new AppError('networkConfig is required', 400);
@@ -55,21 +50,14 @@ function generateNetworkFiles({ serviceSlug, environment, networkConfig }) {
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
-<<<<<<< HEAD
   files['outputs.tf'] = generateOutputsTf('network');
   files['main.tf'] = generateMainTf({ network: { ...networkConfig, serviceSlug, environment } });
   files['terraform.tfvars'] = `aws_region = "${networkConfig.region}"\n`;
-=======
-  files['outputs.tf'] = generateOutputsTf();
-  files['main.tf'] = generateMainTf({ network: { ...networkConfig, serviceSlug, environment } });
-  files['terraform.tfvars'] = `aws_region = "${networkConfig.region}"\n`;
-  writeToDisk("terraform", files);
->>>>>>> c9c2441 (add terraform not complete)
 
   return files;
 }
 
-<<<<<<< HEAD
+
 /**
  * Builds the full set of Terraform files for a service/environment from
  * the ECR config: { name, image_tag_mutability, scan_on_push, force_delete, region? }.
