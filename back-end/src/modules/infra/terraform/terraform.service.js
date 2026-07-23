@@ -9,6 +9,22 @@ const { generateOutputsTf } = require('./generators/outputs.generator');
 const TEMPLATE_DIR = path.join(__dirname, 'template');
 
 /**
+ * Returns backend.tf content.
+ * If LOCAL_TF_BACKEND=true in env, uses a local file backend (no S3 needed).
+ * This is only for local development — always use S3 in production.
+ */
+function buildBackendTf(templateData) {
+  if (process.env.LOCAL_TF_BACKEND === 'true') {
+    return `terraform {
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+}\n`;
+  }
+  return renderTemplate(path.join(TEMPLATE_DIR, 'backend.tf'), templateData);
+}
+
+/**
  * Builds the full set of Terraform files for a service/environment from
  * the simplified network config: { name, region, cidr }.
  * Everything else is fixed inside modules/network/main.tf itself.
@@ -27,7 +43,7 @@ function generateNetworkFiles({ serviceSlug, environment, networkConfig }) {
   };
 
   const files = {};
-  files['backend.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'backend.tf'), templateData);
+  files['backend.tf'] = buildBackendTf(templateData);
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
@@ -58,7 +74,7 @@ function generateEcrFiles({ serviceSlug, environment, ecrConfig }) {
   };
 
   const files = {};
-  files['backend.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'backend.tf'), templateData);
+  files['backend.tf'] = buildBackendTf(templateData);
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
