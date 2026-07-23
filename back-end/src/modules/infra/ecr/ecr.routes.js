@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.post('/:serviceId/repos', validate(createEcrSchema), controller.createRepo);
+router.post('/:serviceId/repos/create', validate(createEcrSchema), controller.createRepo);
 router.get('/:serviceId/repos', controller.listRepos);
 router.get('/repos/:repoId', controller.getRepo);
 router.patch('/repos/:repoId', validate(updateEcrSchema), controller.updateRepo);
