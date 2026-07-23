@@ -103,4 +103,3 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
 }
 
 module.exports = { generateNetworkFiles, generateEcrFiles, writeToDisk, TEMPLATE_DIR };
-

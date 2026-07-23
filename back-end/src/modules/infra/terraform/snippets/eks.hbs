@@ -1,0 +1,52 @@
+module "eks" {
+  source = "./modules/eks"
+
+  # --- Networking: ALWAYS a literal reference to module.network's outputs.
+  # Never a Handlebars placeholder, never sourced from the EKS DB config —
+  # this is what removes the duplicate-VPC problem from the standalone
+  # EKS project.
+  vpc_id             = module.network.vpc_id
+  public_subnet_ids  = module.network.public_subnet_ids
+  private_subnet_ids = module.network.private_subnet_ids
+
+  # --- Cluster config: sourced from the EKS DB config
+  region          = "{{region}}"
+  cluster_name    = "{{clusterName}}"
+  cluster_version = "{{clusterVersion}}"
+
+  node_groups = {
+{{#each nodeGroups}}
+    {{@key}} = {
+      instance_types = [{{#each this.instanceTypes}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+      capacity_type  = "{{this.capacityType}}"
+      desired_size   = {{this.desiredSize}}
+      min_size       = {{this.minSize}}
+      max_size       = {{this.maxSize}}
+      disk_size      = {{this.diskSize}}
+    }
+{{/each}}
+  }
+
+  names_of_users_cluster_admins = [
+{{#each clusterAdmins}}
+    {
+      user_name       = "{{this.userName}}"
+      user_account_id = "{{this.userAccountId}}"
+      cluster_name    = "{{../clusterName}}"
+    }{{#unless @last}},{{/unless}}
+{{/each}}
+  ]
+
+  # Grafana admin password is intentionally NOT embedded here as a literal —
+  # it is declared as a sensitive root variable (see variables.generator.js)
+  # and populated via terraform.tfvars / environment injection at apply time,
+  # so it never sits in plaintext inside main.tf.
+  grafana_admin_password = var.grafana_admin_password
+
+  enable_ebs_csi          = {{enableEbsCsi}}
+  enable_alb_controller   = {{enableAlbController}}
+  enable_external_dns     = {{enableExternalDns}}
+  enable_external_secrets = {{enableExternalSecrets}}
+
+  depends_on = [module.network]
+}
