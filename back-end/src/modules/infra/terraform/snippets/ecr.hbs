@@ -1,0 +1,8 @@
+module "ecr" {
+  source = "./modules/ecr"
+
+  name                 = "{{name}}"
+  image_tag_mutability = "{{image_tag_mutability}}"
+  scan_on_push         = {{scan_on_push}}
+  force_delete         = {{force_delete}}
+}

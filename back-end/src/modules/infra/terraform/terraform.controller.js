@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const terraformService = require('./terraform.service');
 const networkService = require('../network/network.service');
+const ecrService = require('../ecr/ecr.service');
 
 /**
  * POST /infra/terraform/vpcs/:vpcId/generate
@@ -37,4 +38,35 @@ async function generateNetworkFiles(req, res, next) {
   }
 }
 
-module.exports = { generateNetworkFiles };
+/**
+ * POST /infra/terraform/repos/:repoId/generate
+ * Body: { serviceSlug, environment }
+ *
+ * Pulls the ECR repo's config from the DB (ownership enforced inside
+ * ecr.service.js), renders all root Terraform files plus the 3 static
+ * ECR module files, and returns them as a { filename → content } map.
+ */
+async function generateEcrFiles(req, res, next) {
+  try {
+    const { serviceSlug = 'service', environment = 'dev' } = req.body;
+
+    const ecrConfig = await ecrService.getGeneratorConfig(req.user.id, req.params.repoId, {
+      serviceSlug,
+      environment,
+    });
+
+    const files = terraformService.generateEcrFiles({ serviceSlug, environment, ecrConfig });
+
+    const moduleDir = path.join(terraformService.TEMPLATE_DIR, 'modules', 'ecr');
+    files['modules/ecr/main.tf'] = fs.readFileSync(path.join(moduleDir, 'main.tf'), 'utf8');
+    files['modules/ecr/variables.tf'] = fs.readFileSync(path.join(moduleDir, 'variables.tf'), 'utf8');
+    files['modules/ecr/outputs.tf'] = fs.readFileSync(path.join(moduleDir, 'outputs.tf'), 'utf8');
+
+    res.json({ success: true, data: files });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { generateNetworkFiles, generateEcrFiles };
+
