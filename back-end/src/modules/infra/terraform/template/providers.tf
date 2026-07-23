@@ -3,7 +3,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "{{projectSlug}}"
+      Service     = "{{serviceSlug}}"
       Environment = "{{environment}}"
       ManagedBy   = "autodeployers"
     }

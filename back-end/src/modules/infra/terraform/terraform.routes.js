@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/vpcs/:vpcId/preview', terraformController.previewNetworkFiles);
+router.post('/vpcs/:vpcId/generate', terraformController.generateNetworkFiles);
 
 module.exports = router;

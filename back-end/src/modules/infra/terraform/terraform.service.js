@@ -9,23 +9,17 @@ const { generateOutputsTf } = require('./generators/outputs.generator');
 const TEMPLATE_DIR = path.join(__dirname, 'template');
 
 /**
- * Builds the full set of Terraform files for one project/environment from
- * the simplified network config (see network.service.js#toGeneratorConfig
- * for the exact input shape).
- *
- * With the simplified config, main.tf embeds the actual values directly
- * (via the network.hbs snippet) rather than referencing var.* — so
- * terraform.tfvars only needs to carry aws_region now. That's a direct
- * consequence of moving to count+cidrs config instead of the old fully
- * normalized per-subnet/per-route entity model.
+ * Builds the full set of Terraform files for one service/environment from
+ * the fully-simplified network config: { name, region, cidr }.
+ * Everything else is fixed inside modules/network/main.tf itself.
  */
-function generateNetworkFiles({ projectSlug, environment, networkConfig }) {
+function generateNetworkFiles({ serviceSlug, environment, networkConfig }) {
   if (!networkConfig || !networkConfig.cidr) {
     throw new AppError('networkConfig is required', 400);
   }
 
   const templateData = {
-    projectSlug,
+    serviceSlug,
     environment,
     awsRegion: networkConfig.region,
     stateBucket: process.env.TF_STATE_BUCKET,
@@ -38,8 +32,9 @@ function generateNetworkFiles({ projectSlug, environment, networkConfig }) {
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
   files['outputs.tf'] = generateOutputsTf();
-  files['main.tf'] = generateMainTf({ network: { ...networkConfig, projectSlug, environment } });
+  files['main.tf'] = generateMainTf({ network: { ...networkConfig, serviceSlug, environment } });
   files['terraform.tfvars'] = `aws_region = "${networkConfig.region}"\n`;
+  // writeToDisk("terraform", files);
 
   return files;
 }

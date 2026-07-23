@@ -1,22 +1,7 @@
 module "network" {
   source = "./modules/network"
 
-  name = "{{name}}"
-  cidr = "{{cidr}}"
-  azs  = [{{#each azs}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
-
-  public_subnet_cidrs  = [{{#each publicSubnetCidrs}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
-  private_subnet_cidrs = [{{#each privateSubnetCidrs}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
-
-  internet_gateway     = {{internetGateway}}
-  nat_gateway_strategy = "{{natGateway}}"
-
-  enable_dns_support   = {{enableDnsSupport}}
-  enable_dns_hostnames = {{enableDnsHostnames}}
-
-  tags = {
-    Project     = "{{projectSlug}}"
-    Environment = "{{environment}}"
-    ManagedBy   = "autodeployers"
-  }
+  name   = "{{name}}"
+  region = "{{region}}"
+  cidr   = "{{cidr}}"
 }
