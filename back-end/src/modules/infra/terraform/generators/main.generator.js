@@ -12,13 +12,11 @@ function renderSnippet(name, data) {
  * Builds the full main.tf content by concatenating one snippet per
  * infrastructure module the user actually configured.
  *
-<<<<<<< HEAD
  * Each resource type maps to a matching .hbs file in snippets/.
- * Adding EKS/RDS later is just:
- *   if (eks) blocks.push(renderSnippet('eks', eks));
+ * Adding RDS later is just another `if (rds) blocks.push(renderSnippet('rds', rds));`
  * — main.generator.js itself doesn't need to change shape, only grow this list.
  */
-function generateMainTf({ network, ecr }) {
+function generateMainTf({ network, ecr, eks }) {
 
   const blocks = [];
 
@@ -34,6 +32,10 @@ function generateMainTf({ network, ecr }) {
   if (ecr) {
     blocks.push(renderSnippet('ecr', ecr));
 
+  }
+
+  if (eks) {
+    blocks.push(renderSnippet('eks', eks));
   }
 
   return blocks.join('\n\n');

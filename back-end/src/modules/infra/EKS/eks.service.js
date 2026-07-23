@@ -1,11 +1,16 @@
 const AppError = require('../../../core/utils/AppError');
 const { encrypt, decrypt } = require('../../../core/utils/encryption');
 const { Service } = require('../../service/service.model');
+const { Project } = require('../../projects/projects.model');
 const { Network } = require('../network/network.model');
 const { EksCluster } = require('./eks.model');
 
+/** Verify the service exists and is owned by this user (via project → owner_id). */
 async function getOwnedService(serviceId, userId) {
-  const service = await Service.findOne({ where: { id: serviceId, owner_id: userId } });
+  const service = await Service.findOne({
+    where: { id: serviceId },
+    include: [{ model: Project, as: 'project', where: { owner_id: userId }, attributes: [] }],
+  });
   if (!service) throw new AppError('Service not found', 404);
   return service;
 }
@@ -13,11 +18,14 @@ async function getOwnedService(serviceId, userId) {
 async function getOwnedCluster(clusterId, userId) {
   const cluster = await EksCluster.findOne({
     where: { id: clusterId },
-    include: [{ model: Service, as: 'service', 
-      
-      where: { owner_id: userId }, attributes: [] }
-
-      
+    include: [
+      {
+        model: Service,
+        as: 'service',
+        required: true,
+        attributes: [],
+        include: [{ model: Project, as: 'project', where: { owner_id: userId }, attributes: [] }],
+      },
     ],
   });
   if (!cluster) throw new AppError('EKS cluster not found', 404);

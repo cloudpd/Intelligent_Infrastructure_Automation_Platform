@@ -3,6 +3,7 @@ const path = require('path');
 const terraformService = require('./terraform.service');
 const networkService = require('../network/network.service');
 const ecrService = require('../ecr/ecr.service');
+const eksService = require('../EKS/eks.service');
 
 /**
  * POST /infra/terraform/vpcs/:vpcId/generate
@@ -89,5 +90,54 @@ res.json({
   }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles };
+/**
+ * POST /infra/terraform/vpcs/:vpcId/clusters/:clusterId/generate
+ * Body: { serviceSlug, environment }
+ *
+ * EKS can never be generated on its own — see terraform.service.js#generateEksFiles
+ * and snippets/eks.hbs — so this pulls both the Network config (ownership
+ * enforced inside network.service.js) and the EKS config (ownership enforced
+ * inside eks.service.js), renders all root Terraform files plus the static
+ * Network and EKS module trees, and writes them to disk the same way
+ * generateEcrFiles does.
+ */
+async function generateEksFiles(req, res, next) {
+  try {
+    const { serviceSlug = 'service', environment = 'dev' } = req.body;
+
+    const networkConfig = await networkService.getGeneratorConfig(req.user.id, req.params.vpcId, {
+      serviceSlug,
+      environment,
+    });
+    const eksConfig = await eksService.getGeneratorConfig(req.user.id, req.params.clusterId);
+
+    const files = terraformService.generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig });
+
+    const outputDir = path.join(
+      process.cwd(),
+      "generated",
+      serviceSlug,
+      environment
+    );
+
+    terraformService.writeToDisk(
+      outputDir,
+      files,
+      {
+        includeNetwork: true,
+        includeEks: true,
+      }
+    );
+
+    res.json({
+      success: true,
+      message: "Terraform files generated.",
+      outputDir,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles };
 

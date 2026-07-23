@@ -9,6 +9,7 @@ const ciRoutes = require('./modules/ci/ci.routes');
 const k8sRoutes = require('./modules/k8s/normal/k8s.routes');
 const infraNetworkRoutes = require('./modules/infra/network/network.routes');
 const infraEcrRoutes = require('./modules/infra/ecr/ecr.routes');
+const infraEksRoutes = require('./modules/infra/EKS/eks.routes');
 
 
 const infraTerraformRoutes = require('./modules/infra/terraform/terraform.routes');
@@ -33,6 +34,7 @@ app.use('/github', githubRoutes);
 app.use('/dockerize', dockerizeRoutes);
 app.use('/infra/network', infraNetworkRoutes);
 app.use('/infra/ecr', infraEcrRoutes);
+app.use('/infra/eks', infraEksRoutes);
 app.use('/infra/terraform', infraTerraformRoutes);
 app.use('/aws', awsRoutes);
 

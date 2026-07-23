@@ -89,7 +89,53 @@ function generateEcrFiles({ serviceSlug, environment, ecrConfig }) {
   return files;
 }
 
-function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = false } = {}) {
+/**
+ * Builds the full set of Terraform files for a service/environment from
+ * both the Network config and the EKS config.
+ *
+ * Unlike Network/ECR, EKS can never stand alone: snippets/eks.hbs wires
+ * vpc_id/public_subnet_ids/private_subnet_ids as literal
+ * `module.network.*` references (never templated, never sourced from the
+ * EKS DB config — see eks.hbs), so a Network module must be rendered into
+ * the same main.tf. This mirrors generateNetworkFiles/generateEcrFiles for
+ * everything else (root scaffolding, variables, outputs, module copy) and
+ * only differs by requiring the extra config and rendering two module
+ * blocks instead of one.
+ */
+function generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig }) {
+  if (!networkConfig || !networkConfig.cidr) {
+    throw new AppError('networkConfig is required', 400);
+  }
+  if (!eksConfig || !eksConfig.clusterName) {
+    throw new AppError('eksConfig is required', 400);
+  }
+
+  const templateData = {
+    serviceSlug,
+    environment,
+    awsRegion: eksConfig.region || networkConfig.region,
+    stateBucket: process.env.TF_STATE_BUCKET,
+    lockTable: process.env.TF_LOCK_TABLE,
+  };
+
+  const files = {};
+  files['backend.tf'] = buildBackendTf(templateData);
+  files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
+  files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
+  files['variables.tf'] = generateVariablesTf({ eksEnabled: true });
+  files['outputs.tf'] = generateOutputsTf('network') + generateOutputsTf('eks');
+  files['main.tf'] = generateMainTf({
+    network: { ...networkConfig, serviceSlug, environment },
+    eks: { ...eksConfig, serviceSlug, environment },
+  });
+  files['terraform.tfvars'] =
+    `aws_region = "${templateData.awsRegion}"\n` +
+    `grafana_admin_password = "${eksConfig.grafanaAdminPassword}"\n`;
+
+  return files;
+}
+
+function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = false, includeEks = false } = {}) {
   writeFiles(outputDir, files);
   if (includeNetwork) {
     copyDir(
@@ -103,7 +149,13 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
       path.join(outputDir, 'modules', 'ecr')
     );
   }
+  if (includeEks) {
+    copyDir(
+      path.join(TEMPLATE_DIR, 'modules', 'eks'),
+      path.join(outputDir, 'modules', 'eks')
+    );
+  }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles, writeToDisk, TEMPLATE_DIR };
+module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, writeToDisk, TEMPLATE_DIR };
 
