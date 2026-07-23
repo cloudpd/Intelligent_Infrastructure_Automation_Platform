@@ -62,7 +62,26 @@ async function generateEcrFiles(req, res, next) {
     files['modules/ecr/variables.tf'] = fs.readFileSync(path.join(moduleDir, 'variables.tf'), 'utf8');
     files['modules/ecr/outputs.tf'] = fs.readFileSync(path.join(moduleDir, 'outputs.tf'), 'utf8');
 
-    res.json({ success: true, data: files });
+    const outputDir = path.join(
+    process.cwd(),
+    "generated",
+    serviceSlug,
+    environment
+);
+
+terraformService.writeToDisk(
+    outputDir,
+    files,
+    {
+        includeEcr: true
+    }
+);
+
+res.json({
+    success: true,
+    message: "Terraform files generated.",
+    outputDir
+});
   } catch (err) {
     next(err);
   }

@@ -21,6 +21,7 @@ function buildBackendTf(templateData) {
   }
 }\n`;
   }
+  console.log("LOCAL_TF_BACKEND =", process.env.LOCAL_TF_BACKEND);
   return renderTemplate(path.join(TEMPLATE_DIR, 'backend.tf'), templateData);
 }
 
@@ -47,7 +48,7 @@ function generateNetworkFiles({ serviceSlug, environment, networkConfig }) {
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
-  files['outputs.tf'] = generateOutputsTf();
+  files['outputs.tf'] = generateOutputsTf('network');
   files['main.tf'] = generateMainTf({ network: { ...networkConfig, serviceSlug, environment } });
   files['terraform.tfvars'] = `aws_region = "${networkConfig.region}"\n`;
 
@@ -78,7 +79,7 @@ function generateEcrFiles({ serviceSlug, environment, ecrConfig }) {
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
-  files['outputs.tf'] = generateOutputsTf();
+  files['outputs.tf'] = generateOutputsTf('ecr');
   files['main.tf'] = generateMainTf({ ecr: { ...ecrConfig, serviceSlug, environment } });
   files['terraform.tfvars'] = `aws_region = "${templateData.awsRegion}"\n`;
 

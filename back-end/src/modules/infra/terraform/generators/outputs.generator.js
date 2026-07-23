@@ -1,5 +1,7 @@
-function generateOutputsTf() {
-  return `output "vpc_id" {
+function generateOutputsTf(type) {
+  if (type === 'network') {
+    return `
+output "vpc_id" {
   value = module.network.vpc_id
 }
 
@@ -14,7 +16,11 @@ output "private_subnet_ids" {
 output "nat_public_ips" {
   value = module.network.nat_public_ips
 }
+`;
+  }
 
+  if (type === 'ecr') {
+    return `
 output "ecr_repository_url" {
   value = module.ecr.repository_url
 }
@@ -27,6 +33,8 @@ output "ecr_registry_id" {
   value = module.ecr.registry_id
 }
 `;
-}
+  }
 
+  return '';
+}
 module.exports = { generateOutputsTf };
