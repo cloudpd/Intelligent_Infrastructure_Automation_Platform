@@ -5,6 +5,8 @@ require('./modules/auth/auth.model');
 require('./modules/projects/projects.model');
 require('./modules/github/github.model');
 require('./modules/ci/ci.model');
+require('./modules/infra/network/network.model');
+require('./modules/infra/ecr/ecr.model');
 
 
 const PORT = process.env.PORT || 5000;
@@ -15,7 +17,7 @@ async function start() {
     console.log('✅ Connected to MySQL');
 
     // await sequelize.sync({ alter: true });
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
     console.log('✅ Users table synced');
 
     app.listen(PORT, () => {
