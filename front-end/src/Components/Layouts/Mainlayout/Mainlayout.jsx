@@ -10,10 +10,12 @@ export default function Mainlayout() {
   const showShell = !authShellPaths.includes(location.pathname);
 
   return (
-    <>
+    <div className={showShell ? 'app-shell' : 'app-shell app-shell--bare'}>
       {showShell && <Navbar />}
-      <Outlet />
-      {showShell && <Footer />}
-    </>
+      <div className="app-content">
+        <Outlet />
+        {showShell && <Footer />}
+      </div>
+    </div>
   )
 }

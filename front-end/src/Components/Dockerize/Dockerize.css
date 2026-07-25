@@ -20,10 +20,10 @@
 .dockerize-editor {
   width: 100%;
   font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   background: #0d1117;
   color: #c9d1d9;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1rem;
   resize: vertical;
 }

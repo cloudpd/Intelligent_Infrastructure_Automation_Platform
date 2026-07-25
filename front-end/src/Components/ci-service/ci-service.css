@@ -5,12 +5,12 @@
   align-items: start; 
 }
 .ci-card {
-  background: rgba(15, 23, 42, 0.84);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 24px;
-  padding: 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-md);
+  padding: 16px;
   display: grid;
-  gap: 16px;
+  gap: 12px;
   transition: min-height 0.2s ease; 
 }
 
@@ -29,34 +29,34 @@
 .ci-field {
   display: grid;
   gap: 8px;
-  color: #e2e8f0;
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
 .ci-field input,
 .ci-field select {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(2, 6, 23, 0.7);
-  color: #f8fafc;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-xs);
+  padding: 9px 12px;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .ci-field--error input,
 .ci-field--error select {
-  border-color: #f87171;
+  border-color: var(--danger);
 }
 
 .ci-error {
-  color: #fecaca;
-  font-size: 0.9rem;
+  color: var(--danger-strong);
+  font-size: 0.8rem;
 }
 
 .ci-error-message {
-  background: rgba(248, 113, 113, 0.16);
-  color: #fecaca;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
   border: 1px solid rgba(248, 113, 113, 0.35);
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 10px 14px;
 }
 
@@ -85,33 +85,33 @@
 .ci-status {
   margin-top: 16px;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(16, 185, 129, 0.14);
-  color: #bbf7d0;
+  border-radius: 10px;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .ci-preview-card {
-  margin-top: 20px;
-  background: rgba(2, 6, 23, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 24px;
-  padding: 20px;
+  margin-top: 16px;
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-md);
+  padding: 14px;
 }
 
 .ci-preview {
   white-space: pre-wrap;
   word-break: break-word;
-  color: #cbd5e1;
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
   line-height: 1.6;
 }
 
 
 .ci-info-message { 
   background: rgba(56, 189, 248, 0.12);
-  color: #bae6fd;
+  color: #0ea5e9;
   border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 12px 14px;
   font-weight: 500;
 }
@@ -120,7 +120,7 @@
 .ci-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.72);
+  background: var(--bg-modal-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -130,15 +130,15 @@
 }
 
 .ci-modal {
-  background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 24px;
-  padding: 24px;
+  background: var(--bg-modal);
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-md);
+  padding: 18px;
   width: 75%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .ci-modal__header {
@@ -149,23 +149,23 @@
 }
 
 .ci-modal__close {
-  background: rgba(148, 163, 184, 0.12);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  color: #e2e8f0;
-  border-radius: 12px;
-  width: 32px;
-  height: 32px;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border-color-strong);
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .ci-modal__close:hover {
-  background: rgba(148, 163, 184, 0.22);
+  background: var(--accent-soft);
 }
 
 .ci-modal__body {
@@ -177,5 +177,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-

@@ -1,5 +1,5 @@
 /* Kubernetes Deployment Wizard — built on the same design tokens as
-   Projects.css (dark glass cards, indigo -> cyan gradient accents,
+   Projects.css (themed glass cards, indigo -> cyan gradient accents,
    pill buttons) so it feels native to the rest of the platform. */
 
 .k8s-step-tracker {
@@ -13,20 +13,20 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-input);
+  color: var(--text-tertiary);
   border-radius: 999px;
-  padding: 8px 16px 8px 8px;
-  font-size: 0.85rem;
+  padding: 6px 12px 6px 6px;
+  font-size: 0.68rem;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 .k8s-step-tracker__item:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  color: #cbd5e1;
+  border-color: var(--accent-soft-strong);
+  color: var(--text-secondary);
 }
 
 .k8s-step-tracker__num {
@@ -36,48 +36,48 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(148, 163, 184, 0.16);
-  font-size: 0.75rem;
+  background: var(--bg-surface-hover);
+  font-size: 0.7rem;
 }
 
 .k8s-step-tracker__item.is-active {
-  border-color: rgba(99, 102, 241, 0.6);
-  background: rgba(99, 102, 241, 0.12);
-  color: #f8fafc;
+  border-color: var(--accent-soft-strong);
+  background: var(--accent-soft);
+  color: var(--text-primary);
 }
 
 .k8s-step-tracker__item.is-active .k8s-step-tracker__num,
 .k8s-step-tracker__item.is-done .k8s-step-tracker__num {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  background: var(--accent-gradient);
   color: #fff;
 }
 
 .k8s-step-tracker__item.is-done {
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 .k8s-wizard-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
   align-items: start;
 }
 
 .k8s-wizard-card {
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 24px;
-  padding: 28px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px;
 }
 
 .k8s-step__title {
   margin: 0 0 6px;
-  font-size: 1.4rem;
-  color: #f8fafc;
+  font-size: 1.15rem;
+  color: var(--text-primary);
 }
 
 .k8s-step__hint {
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin: 0 0 20px;
   line-height: 1.7;
 }
@@ -85,25 +85,25 @@
 .k8s-field {
   display: grid;
   gap: 8px;
-  font-size: 0.92rem;
-  color: #cbd5e1;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
   margin-bottom: 16px;
 }
 
 .k8s-field input,
 .k8s-field select {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.8);
-  color: #f8fafc;
-  padding: 12px 14px;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-xs);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 9px 12px;
   outline: none;
 }
 
 .k8s-field input:disabled {
-  color: #64748b;
-  background: rgba(15, 23, 42, 0.4);
+  color: var(--text-muted);
+  background: var(--bg-surface-soft);
 }
 
 .k8s-field--checkbox {
@@ -128,13 +128,13 @@
 .k8s-subsection {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-top: 1px solid var(--border-color);
 }
 
 .k8s-subsection h3 {
   margin: 0 0 6px;
-  font-size: 1.05rem;
-  color: #f8fafc;
+  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
 .k8s-subsection__header {
@@ -153,26 +153,26 @@
 
 .k8s-envvar-row input,
 .k8s-envvar-row select {
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.8);
-  color: #f8fafc;
-  padding: 10px 12px;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-xs);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 8px 10px;
   outline: none;
 }
 
 .k8s-icon-button {
   border: none;
-  background: rgba(239, 68, 68, 0.14);
-  color: #fecaca;
-  border-radius: 10px;
-  font-size: 1.1rem;
+  background: var(--danger-bg);
+  color: var(--danger-strong);
+  border-radius: 8px;
+  font-size: 1rem;
   cursor: pointer;
 }
 
 .k8s-toggle-group {
   display: inline-flex;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color-strong);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
@@ -182,7 +182,7 @@
 .k8s-toggle-btn {
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   padding: 8px 20px;
   border-radius: 999px;
   cursor: pointer;
@@ -190,7 +190,7 @@
 }
 
 .k8s-toggle-btn.is-selected {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  background: var(--accent-gradient);
   color: #fff;
 }
 
@@ -206,11 +206,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 18px;
-  padding: 16px;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-sm);
+  padding: 12px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-surface-soft);
 }
 
 .k8s-radio-card input {
@@ -220,18 +220,18 @@
 }
 
 .k8s-radio-card.is-selected {
-  border-color: rgba(99, 102, 241, 0.55);
-  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--accent-soft-strong);
+  background: var(--accent-soft);
 }
 
 .k8s-radio-card__title {
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .k8s-radio-card__hint {
-  color: #94a3b8;
-  font-size: 0.88rem;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
   line-height: 1.5;
 }
 
@@ -242,21 +242,21 @@
 .k8s-permission-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
 .k8s-permission-table th,
 .k8s-permission-table td {
   padding: 8px 10px;
   text-align: center;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  color: #cbd5e1;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
 }
 
 .k8s-permission-table th:first-child,
 .k8s-permission-table td:first-child {
   text-align: left;
-  color: #f8fafc;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -267,7 +267,7 @@
   gap: 12px;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-top: 1px solid var(--border-color);
 }
 
 .k8s-wizard-actions__final {
@@ -280,14 +280,14 @@
 }
 
 .k8s-result__meta {
-  color: #a7f3d0;
-  font-size: 0.85rem;
+  color: var(--success);
+  font-size: 0.75rem;
 }
 
 .k8s-result__files {
   margin: 10px 0 0;
   padding-left: 18px;
-  color: #a7f3d0;
+  color: var(--success);
 }
 
 .k8s-preview {
@@ -295,24 +295,24 @@
 }
 
 .k8s-preview__file {
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 8px;
-  background: rgba(2, 6, 23, 0.5);
+  background: var(--bg-surface-soft);
 }
 
 .k8s-preview__file summary {
   cursor: pointer;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
 .k8s-preview__file pre {
   margin-top: 10px;
   white-space: pre-wrap;
-  color: #94a3b8;
-  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
   line-height: 1.6;
 }
 
@@ -320,16 +320,16 @@
 .k8s-summary {
   position: sticky;
   top: 24px;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 24px;
-  padding: 22px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
 }
 
 .k8s-summary__title {
   margin: 0 0 16px;
-  font-size: 1.1rem;
-  color: #f8fafc;
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
 .k8s-summary__facts {
@@ -342,24 +342,24 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .k8s-summary__facts dt {
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .k8s-summary__facts dd {
   margin: 0;
-  color: #f8fafc;
+  color: var(--text-primary);
   font-weight: 600;
   text-align: right;
 }
 
 .k8s-summary__subtitle {
   margin: 0 0 10px;
-  font-size: 0.95rem;
-  color: #f8fafc;
+  font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
 .k8s-summary__list {
@@ -374,12 +374,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  color: #64748b;
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .k8s-summary__item.is-on {
-  color: #a7f3d0;
+  color: var(--success);
 }
 
 .k8s-summary__mark {

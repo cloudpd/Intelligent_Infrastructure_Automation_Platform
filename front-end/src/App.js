@@ -16,6 +16,7 @@ import Register from './Components/Register/Register';
 // import CartContextProvider from './Context/CartContext';
 // import Profile from './Components/Profile/Profile';
 import AuthProvider from './Context/AuthContext.jsx';
+import ThemeProvider from './Context/ThemeContext.jsx';
 import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
 import { ToastContainer } from 'react-toastify';
 // import Allorders from './Components/Orders/Allorders';
@@ -170,12 +171,14 @@ function App() {
   ])
   return (
     <>
-      <AuthProvider>
-        {/* <CartContextProvider> */}
-          <RouterProvider router={routes} />
-          {/* <ToastContainer /> */}
-        {/* </CartContextProvider> */}
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          {/* <CartContextProvider> */}
+            <RouterProvider router={routes} />
+            {/* <ToastContainer /> */}
+          {/* </CartContextProvider> */}
+        </AuthProvider>
+      </ThemeProvider>
     </>
   );
 }
