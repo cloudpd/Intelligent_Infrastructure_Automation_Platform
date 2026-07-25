@@ -10,7 +10,7 @@ const k8sRoutes = require('./modules/k8s/normal/k8s.routes');
 const infraNetworkRoutes = require('./modules/infra/network/network.routes');
 const infraEcrRoutes = require('./modules/infra/ecr/ecr.routes');
 const infraEksRoutes = require('./modules/infra/EKS/eks.routes');
-
+const infraVmRoutes = require('./modules/infra/vm/vm.routes');
 
 const infraTerraformRoutes = require('./modules/infra/terraform/terraform.routes');
 const awsRoutes = require('./modules/aws/aws.routes');
@@ -37,6 +37,7 @@ app.use('/infra/ecr', infraEcrRoutes);
 app.use('/infra/eks', infraEksRoutes);
 app.use('/infra/terraform', infraTerraformRoutes);
 app.use('/aws', awsRoutes);
+app.use('/infra/vm', infraVmRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
