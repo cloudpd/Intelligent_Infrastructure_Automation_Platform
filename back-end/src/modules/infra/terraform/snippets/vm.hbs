@@ -1,0 +1,19 @@
+module "vm" {
+  source = "./modules/vm"
+
+  # --- Networking: ALWAYS a literal reference to module.network's outputs.
+  # Never a Handlebars placeholder, never sourced from the VM DB config —
+  # same rule as vpc_id in eks.hbs.
+  vpc_id    = module.network.vpc_id
+  subnet_id = module.network.public_subnet_ids[0]
+
+  # --- VM config: sourced from the VmDeployment DB config
+  name              = "{{name}}"
+  region            = "{{region}}"
+  instance_type     = "{{instanceType}}"
+  kind_cluster_name = "{{kindClusterName}}"
+  container_port    = {{containerPort}}
+  host_port         = {{hostPort}}
+
+  depends_on = [module.network]
+}
