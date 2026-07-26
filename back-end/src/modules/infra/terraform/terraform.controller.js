@@ -4,6 +4,7 @@ const terraformService = require('./terraform.service');
 const networkService = require('../network/network.service');
 const ecrService = require('../ecr/ecr.service');
 const eksService = require('../EKS/eks.service');
+const vmService = require('../vm/vm.service');
 
 /**
  * POST /infra/terraform/vpcs/:vpcId/generate
@@ -139,5 +140,33 @@ async function generateEksFiles(req, res, next) {
   }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles };
+async function generateVmFiles(req, res, next) {
+  try {
+    const { serviceSlug = 'service', environment = 'dev' } = req.body;
+
+    const networkConfig = await networkService.getGeneratorConfig(req.user.id, req.params.vpcId, {
+      serviceSlug,
+      environment,
+    });
+    const vmConfig = await vmService.getGeneratorConfig(req.user.id, req.params.vmId, {
+      serviceSlug,
+      environment,
+    });
+
+    const files = terraformService.generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig });
+
+    const outputDir = path.join(process.cwd(), 'generated', serviceSlug, environment);
+
+    terraformService.writeToDisk(outputDir, files, {
+      includeNetwork: true,
+      includeVm: true,
+    });
+
+    res.json({ success: true, message: 'Terraform files generated.', outputDir });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, generateVmFiles };
 

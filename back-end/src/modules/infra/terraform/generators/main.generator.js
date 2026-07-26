@@ -16,7 +16,7 @@ function renderSnippet(name, data) {
  * Adding RDS later is just another `if (rds) blocks.push(renderSnippet('rds', rds));`
  * — main.generator.js itself doesn't need to change shape, only grow this list.
  */
-function generateMainTf({ network, ecr, eks }) {
+function generateMainTf({ network, ecr, eks, vm }) {
 
   const blocks = [];
 
@@ -36,6 +36,9 @@ function generateMainTf({ network, ecr, eks }) {
 
   if (eks) {
     blocks.push(renderSnippet('eks', eks));
+  }
+  if (vm) {
+    blocks.push(renderSnippet('vm', vm));
   }
 
   return blocks.join('\n\n');

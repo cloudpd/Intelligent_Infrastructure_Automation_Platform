@@ -1,9 +1,7 @@
-
 function generateOutputsTf(type) {
   if (type === 'network') {
     return `
 output "vpc_id" {
-
   value = module.network.vpc_id
 }
 
@@ -19,14 +17,12 @@ output "nat_public_ips" {
   value = module.network.nat_public_ips
 }
 `;
-
   }
 
   if (type === 'ecr') {
     return `
 output "ecr_repository_url" {
   value = module.ecr.repository_url
-
 }
 
 output "ecr_repository_arn" {
@@ -63,6 +59,13 @@ output "eks_oidc_provider_arn" {
 `;
   }
 
+  if (type === 'vm') {
+    return `output "vm_instance_id" { value = module.vm.instance_id }
+output "vm_public_ip" { value = module.vm.public_ip }
+`;
+  }
+
   return '';
 }
+
 module.exports = { generateOutputsTf };

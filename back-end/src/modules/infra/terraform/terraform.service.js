@@ -135,7 +135,38 @@ function generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig }
   return files;
 }
 
-function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = false, includeEks = false } = {}) {
+function generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig }) {
+  if (!networkConfig || !networkConfig.cidr) {
+    throw new AppError('networkConfig is required', 400);
+  }
+  if (!vmConfig || !vmConfig.name) {
+    throw new AppError('vmConfig is required', 400);
+  }
+
+  const templateData = {
+    serviceSlug,
+    environment,
+    awsRegion: vmConfig.region || networkConfig.region,
+    stateBucket: process.env.TF_STATE_BUCKET,
+    lockTable: process.env.TF_LOCK_TABLE,
+  };
+
+  const files = {};
+  files['backend.tf'] = buildBackendTf(templateData);
+  files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
+  files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
+  files['variables.tf'] = generateVariablesTf();
+  files['outputs.tf'] = generateOutputsTf('network') + generateOutputsTf('vm');
+  files['main.tf'] = generateMainTf({
+    network: { ...networkConfig, serviceSlug, environment },
+    vm: { ...vmConfig, serviceSlug, environment },
+  });
+  files['terraform.tfvars'] = `aws_region = "${templateData.awsRegion}"\n`;
+
+  return files;
+}
+
+function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = false, includeEks = false, includeVm = false } = {}) {
   writeFiles(outputDir, files);
   if (includeNetwork) {
     copyDir(
@@ -155,7 +186,12 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
       path.join(outputDir, 'modules', 'eks')
     );
   }
+  if (includeVm) {
+      copyDir(path.join(TEMPLATE_DIR, 'modules', 'vm'),
+      path.join(outputDir, 'modules', 'vm')
+    );
+  }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, writeToDisk, TEMPLATE_DIR };
+module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, generateVmFiles, writeToDisk, TEMPLATE_DIR };
 
