@@ -23,6 +23,10 @@ function generateMainTf({ network, ecr, eks, vm }) {
   if (eks && !network) {
     throw new AppError('An EKS module cannot be generated without a Network module in the same project', 422);
   }
+  
+  if (vm && !network) {
+    throw new AppError('A VM module cannot be generated without a Network module in the same project', 422);
+  }
 
   if (network) {
     blocks.push(renderSnippet('network', network));
