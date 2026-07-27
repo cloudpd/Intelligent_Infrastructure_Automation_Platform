@@ -186,6 +186,19 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
     throw new AppError('This service has no Network module yet — create one before generating Terraform files', 422);
   }
 
+  // Belt-and-suspenders: creation time already prevents a service from
+  // having both an EksCluster and a VmDeployment row (see
+  // eks.service.js#assertNoVmDeployment / vm.service.js#assertNoEksCluster).
+  // This just makes sure the generator itself never silently renders both
+  // compute modules into the same main.tf if that invariant is ever
+  // violated some other way (direct DB write, future admin tooling, etc.).
+  if (eksConfig && vmConfig) {
+    throw new AppError(
+      'This service has both an EKS cluster and a VM deployment configured. A service can only use one compute option — delete one before generating Terraform files.',
+      409
+    );
+  }
+
   const awsRegion =
     (eksConfig && eksConfig.region) ||
     (vmConfig && vmConfig.region) ||
