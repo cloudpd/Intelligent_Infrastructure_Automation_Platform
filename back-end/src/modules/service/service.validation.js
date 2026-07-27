@@ -5,10 +5,12 @@ const createServiceSchema = Joi.object({
     'string.min': 'Service name must be at least 2 characters long',
     'string.max': 'Service name must not exceed 100 characters',
     'string.empty': 'Service name is required',
+    'any.required': 'Service name is required',
   }),
   repository_url: Joi.string().uri().required().messages({
     'string.uri': 'repository_url must be a valid URL',
     'string.empty': 'repository_url is required',
+    'any.required': 'repository_url is required',
   }),
   branch: Joi.string().max(100).optional().messages({
     'string.max': 'Branch name must not exceed 100 characters',
