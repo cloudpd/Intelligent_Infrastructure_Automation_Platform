@@ -11,4 +11,11 @@ router.post('/repos/:repoId/generate', terraformController.generateEcrFiles);
 router.post('/vpcs/:vpcId/clusters/:clusterId/generate', terraformController.generateEksFiles);
 router.post('/vpcs/:vpcId/vms/:vmId/generate', terraformController.generateVmFiles);
 
+/**
+ * Unified generate: always renders Network for the service, and
+ * conditionally renders ECR / EKS / VM based on whichever of those
+ * modules already exist in the DB for this service.
+ */
+router.post('/services/:serviceId/generate', terraformController.generateServiceFiles);
+
 module.exports = router;

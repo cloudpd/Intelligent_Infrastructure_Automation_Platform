@@ -166,6 +166,66 @@ function generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig }) 
   return files;
 }
 
+/**
+ * Builds the full set of Terraform files for a service/environment from
+ * whichever module configs are actually present in the DB for this
+ * service. Network is mandatory (the base module, always generated).
+ * ecr / eks / vm are each optional — pass `null` for any module that
+ * hasn't been configured yet for this service, and it's simply left out
+ * of main.tf/outputs.tf/variables.tf, exactly as if the corresponding
+ * per-module generate* function had never been called.
+ *
+ * This mirrors generateNetworkFiles/generateEcrFiles/generateEksFiles/
+ * generateVmFiles above (same root scaffolding, same generator calls) —
+ * it doesn't replace them, it composes them behind the single
+ * /infra/terraform/services/:serviceId/generate endpoint so the caller
+ * doesn't have to know in advance which modules exist for a service.
+ */
+function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConfig, eksConfig, vmConfig }) {
+  if (!networkConfig || !networkConfig.cidr) {
+    throw new AppError('This service has no Network module yet — create one before generating Terraform files', 422);
+  }
+
+  const awsRegion =
+    (eksConfig && eksConfig.region) ||
+    (vmConfig && vmConfig.region) ||
+    (ecrConfig && ecrConfig.region) ||
+    networkConfig.region;
+
+  const templateData = {
+    serviceSlug,
+    environment,
+    awsRegion,
+    stateBucket: process.env.TF_STATE_BUCKET,
+    lockTable: process.env.TF_LOCK_TABLE,
+  };
+
+  const files = {};
+  files['backend.tf'] = buildBackendTf(templateData);
+  files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
+  files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
+  files['variables.tf'] = generateVariablesTf({ eksEnabled: Boolean(eksConfig) });
+
+  files['outputs.tf'] =
+    generateOutputsTf('network') +
+    (ecrConfig ? generateOutputsTf('ecr') : '') +
+    (eksConfig ? generateOutputsTf('eks') : '') +
+    (vmConfig ? generateOutputsTf('vm') : '');
+
+  files['main.tf'] = generateMainTf({
+    network: { ...networkConfig, serviceSlug, environment },
+    ecr: ecrConfig ? { ...ecrConfig, serviceSlug, environment } : undefined,
+    eks: eksConfig ? { ...eksConfig, serviceSlug, environment } : undefined,
+    vm: vmConfig ? { ...vmConfig, serviceSlug, environment } : undefined,
+  });
+
+  files['terraform.tfvars'] =
+    `aws_region = "${awsRegion}"\n` +
+    (eksConfig ? `grafana_admin_password = "${eksConfig.grafanaAdminPassword}"\n` : '');
+
+  return files;
+}
+
 function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = false, includeEks = false, includeVm = false } = {}) {
   writeFiles(outputDir, files);
   if (includeNetwork) {
@@ -193,5 +253,12 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
   }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, generateVmFiles, writeToDisk, TEMPLATE_DIR };
-
+module.exports = {
+  generateNetworkFiles,
+  generateEcrFiles,
+  generateEksFiles,
+  generateVmFiles,
+  generateServiceFiles,
+  writeToDisk,
+  TEMPLATE_DIR,
+};

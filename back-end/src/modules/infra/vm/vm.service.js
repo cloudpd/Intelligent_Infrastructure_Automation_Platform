@@ -120,6 +120,21 @@ async function getGeneratorConfig(userId, vmId, { serviceSlug, environment }) {
   return toGeneratorConfig(vm, { serviceSlug, environment });
 }
 
+/**
+ * Looks up the VmDeployment row by service_id rather than by the record's
+ * own id — used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint to check whether a VM deployment has been configured (written
+ * to the DB) for this service at all. Returns null rather than throwing
+ * when none exists — VM is optional per service, so "not configured yet"
+ * just means the caller skips rendering the vm module, it isn't an error.
+ */
+async function getGeneratorConfigForService(userId, serviceId, { serviceSlug, environment }) {
+  await getOwnedService(serviceId, userId);
+  const vm = await VmDeployment.findOne({ where: { service_id: serviceId } });
+  if (!vm) return null;
+  return toGeneratorConfig(vm, { serviceSlug, environment });
+}
+
 module.exports = {
   createVm,
   listVms,
@@ -127,5 +142,6 @@ module.exports = {
   updateVm,
   deleteVm,
   getGeneratorConfig,
+  getGeneratorConfigForService,
   toGeneratorConfig,
 };

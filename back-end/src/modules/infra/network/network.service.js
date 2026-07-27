@@ -84,6 +84,22 @@ async function getGeneratorConfig(userId, vpcId, { serviceSlug, environment }) {
   return toGeneratorConfig(network, { serviceSlug, environment });
 }
 
+/**
+ * Looks up the Network row by service_id rather than by the record's own
+ * id — used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint, which only has a serviceId to work with. Network is the
+ * mandatory base module, so unlike the ecr/eks/vm variants this never
+ * returns null on a successful, owned lookup — the caller is expected to
+ * treat "not found" as a hard error (no Network module yet for this
+ * service), not as "skip this module".
+ */
+async function getGeneratorConfigForService(userId, serviceId, { serviceSlug, environment }) {
+  await getOwnedService(serviceId, userId);
+  const network = await Network.findOne({ where: { service_id: serviceId } });
+  if (!network) return null;
+  return toGeneratorConfig(network, { serviceSlug, environment });
+}
+
 module.exports = {
   createVpc,
   listVpcs,
@@ -91,4 +107,5 @@ module.exports = {
   updateVpc,
   deleteVpc,
   getGeneratorConfig,
+  getGeneratorConfigForService,
 };

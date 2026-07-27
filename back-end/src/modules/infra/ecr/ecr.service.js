@@ -94,6 +94,21 @@ async function getGeneratorConfig(userId, repoId, { serviceSlug, environment }) 
   return toGeneratorConfig(repo, { serviceSlug, environment });
 }
 
+/**
+ * Looks up the Ecr row by service_id rather than by the record's own id —
+ * used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint to check whether an ECR repo has been configured (written to
+ * the DB) for this service at all. Returns null rather than throwing when
+ * none exists — ECR is optional per service, so "not configured yet" just
+ * means the caller skips rendering the ecr module, it isn't an error.
+ */
+async function getGeneratorConfigForService(userId, serviceId, { serviceSlug, environment }) {
+  await getOwnedService(serviceId, userId);
+  const repo = await Ecr.findOne({ where: { service_id: serviceId } });
+  if (!repo) return null;
+  return toGeneratorConfig(repo, { serviceSlug, environment });
+}
+
 module.exports = {
   createRepo,
   listRepos,
@@ -101,4 +116,5 @@ module.exports = {
   updateRepo,
   deleteRepo,
   getGeneratorConfig,
+  getGeneratorConfigForService,
 };

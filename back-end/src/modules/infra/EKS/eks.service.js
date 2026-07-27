@@ -173,6 +173,21 @@ async function getGeneratorConfig(userId, clusterId) {
   return toGeneratorConfig(cluster);
 }
 
+/**
+ * Looks up the EksCluster row by service_id rather than by the record's
+ * own id — used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint to check whether an EKS cluster has been configured (written to
+ * the DB) for this service at all. Returns null rather than throwing when
+ * none exists — EKS is optional per service, so "not configured yet" just
+ * means the caller skips rendering the eks module, it isn't an error.
+ */
+async function getGeneratorConfigForService(userId, serviceId) {
+  await getOwnedService(serviceId, userId);
+  const cluster = await EksCluster.findOne({ where: { service_id: serviceId } });
+  if (!cluster) return null;
+  return toGeneratorConfig(cluster);
+}
+
 module.exports = {
   createCluster,
   listClusters,
@@ -180,5 +195,6 @@ module.exports = {
   updateCluster,
   deleteCluster,
   getGeneratorConfig,
+  getGeneratorConfigForService,
   toGeneratorConfig,
 };
