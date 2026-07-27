@@ -1,6 +1,3 @@
-// Manually mocked (not auto-mocked) so Jest never has to load the real
-// service.service.js -> service.model.js / projects.model.js -> sequelize
-// chain just to introspect its shape.
 jest.mock('../service.service', () => ({
   createService: jest.fn(),
   getServiceById: jest.fn(),
