@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const AppError = require('../../../core/utils/AppError');
 const terraformService = require('./terraform.service');
 const networkService = require('../network/network.service');
 const ecrService = require('../ecr/ecr.service');
@@ -168,5 +169,94 @@ async function generateVmFiles(req, res, next) {
   }
 }
 
-module.exports = { generateNetworkFiles, generateEcrFiles, generateEksFiles, generateVmFiles };
+/**
+ * POST /infra/terraform/services/:serviceId/generate
+ * Body: { serviceSlug, environment }
+ *
+ * The unified "Generate" action: always renders the Network module (the
+ * mandatory base module for a service), then independently checks the DB
+ * for each optional module — ECR, EKS, VM — and only renders the ones
+ * that have actually been configured (i.e. written to the DB) for this
+ * service. Skips straight past whatever the caller didn't set up, rather
+ * than requiring them to know in advance which per-module generate
+ * endpoint to call.
+ *
+ * EKS/VM still implicitly require Network underneath (enforced at
+ * creation time by eks.service.js#assertNetworkExists /
+ * vm.service.js#assertNetworkExists), so if either config exists in the
+ * DB, Network is guaranteed to exist too — this just makes that
+ * dependency explicit by always resolving Network first and failing fast
+ * if it's missing.
+ */
+async function generateServiceFiles(req, res, next) {
+  try {
+    const { serviceId } = req.params;
+    const { serviceSlug, environment = 'dev' } = req.body;
 
+    // Network is mandatory — resolved first, and its absence is a hard
+    // error, not a "skip this module" case like the other three below.
+    const networkConfig = await networkService.getGeneratorConfigForService(req.user.id, serviceId, {
+      serviceSlug: serviceSlug || 'service',
+      environment,
+    });
+    if (!networkConfig) {
+      throw new AppError(
+        'This service has no Network module yet — create one before generating Terraform files',
+        422
+      );
+    }
+
+    // Once Network resolves we know the service exists and is owned by
+    // this user, so serviceSlug can safely default off of it too.
+    const resolvedSlug = serviceSlug || networkConfig.serviceSlug || 'service';
+
+    // Each of these independently checks the DB and returns null when
+    // that module hasn't been configured for this service yet — this is
+    // the "check if it's been written to the database" step per module.
+    const [ecrConfig, eksConfig, vmConfig] = await Promise.all([
+      ecrService.getGeneratorConfigForService(req.user.id, serviceId, { serviceSlug: resolvedSlug, environment }),
+      eksService.getGeneratorConfigForService(req.user.id, serviceId),
+      vmService.getGeneratorConfigForService(req.user.id, serviceId, { serviceSlug: resolvedSlug, environment }),
+    ]);
+
+    const files = terraformService.generateServiceFiles({
+      serviceSlug: resolvedSlug,
+      environment,
+      networkConfig,
+      ecrConfig,
+      eksConfig,
+      vmConfig,
+    });
+
+    const outputDir = path.join(process.cwd(), 'generated', resolvedSlug, environment);
+
+    terraformService.writeToDisk(outputDir, files, {
+      includeNetwork: true,
+      includeEcr: Boolean(ecrConfig),
+      includeEks: Boolean(eksConfig),
+      includeVm: Boolean(vmConfig),
+    });
+
+    res.json({
+      success: true,
+      message: 'Terraform files generated.',
+      outputDir,
+      modules: {
+        network: true,
+        ecr: Boolean(ecrConfig),
+        eks: Boolean(eksConfig),
+        vm: Boolean(vmConfig),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  generateNetworkFiles,
+  generateEcrFiles,
+  generateEksFiles,
+  generateVmFiles,
+  generateServiceFiles,
+};

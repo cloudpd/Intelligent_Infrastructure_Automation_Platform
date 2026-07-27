@@ -2,6 +2,7 @@ const AppError = require('../../../core/utils/AppError');
 const { Service } = require('../../service/service.model');
 const { Project } = require('../../projects/projects.model');
 const { Network } = require('../network/network.model');
+const { EksCluster } = require('../EKS/eks.model');
 const { VmDeployment } = require('./vm.model');
 
 async function getOwnedService(serviceId, userId) {
@@ -44,9 +45,28 @@ async function assertNetworkExists(serviceId) {
   return network;
 }
 
+/**
+ * A service may run its container on a VM (via a KIND cluster) OR on EKS,
+ * never both — they're two competing compute answers to the same
+ * question ("where does this service actually run"), and letting both
+ * exist at once would mean two independently-applied Terraform resources
+ * both trying to be "the" deployment target with no way for
+ * generateServiceFiles to pick a winner.
+ */
+async function assertNoEksCluster(serviceId) {
+  const cluster = await EksCluster.findOne({ where: { service_id: serviceId } });
+  if (cluster) {
+    throw new AppError(
+      'This service already has an EKS cluster. A service can only use one compute option — VM or EKS, not both. Delete the EKS cluster first if you want to switch to a VM.',
+      409
+    );
+  }
+}
+
 async function createVm(userId, serviceId, data) {
   await getOwnedService(serviceId, userId);
   await assertNetworkExists(serviceId);
+  await assertNoEksCluster(serviceId);
 
   const existing = await VmDeployment.findOne({ where: { service_id: serviceId } });
   if (existing) {
@@ -120,6 +140,21 @@ async function getGeneratorConfig(userId, vmId, { serviceSlug, environment }) {
   return toGeneratorConfig(vm, { serviceSlug, environment });
 }
 
+/**
+ * Looks up the VmDeployment row by service_id rather than by the record's
+ * own id — used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint to check whether a VM deployment has been configured (written
+ * to the DB) for this service at all. Returns null rather than throwing
+ * when none exists — VM is optional per service, so "not configured yet"
+ * just means the caller skips rendering the vm module, it isn't an error.
+ */
+async function getGeneratorConfigForService(userId, serviceId, { serviceSlug, environment }) {
+  await getOwnedService(serviceId, userId);
+  const vm = await VmDeployment.findOne({ where: { service_id: serviceId } });
+  if (!vm) return null;
+  return toGeneratorConfig(vm, { serviceSlug, environment });
+}
+
 module.exports = {
   createVm,
   listVms,
@@ -127,5 +162,6 @@ module.exports = {
   updateVm,
   deleteVm,
   getGeneratorConfig,
+  getGeneratorConfigForService,
   toGeneratorConfig,
 };

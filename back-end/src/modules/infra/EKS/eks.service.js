@@ -3,6 +3,7 @@ const { encrypt, decrypt } = require('../../../core/utils/encryption');
 const { Service } = require('../../service/service.model');
 const { Project } = require('../../projects/projects.model');
 const { Network } = require('../network/network.model');
+const { VmDeployment } = require('../vm/vm.model');
 const { EksCluster } = require('./eks.model');
 
 /** Verify the service exists and is owned by this user (via project → owner_id). */
@@ -64,9 +65,27 @@ function toNodeGroupsColumn(nodeGroups) {
   return out;
 }
 
+/**
+ * A service may run its container on EKS OR on a VM (via a KIND cluster),
+ * never both — same reasoning as vm.service.js#assertNoEksCluster, from
+ * the other side: two competing compute answers to "where does this
+ * service actually run" would leave generateServiceFiles no way to pick
+ * a winner between them.
+ */
+async function assertNoVmDeployment(serviceId) {
+  const vm = await VmDeployment.findOne({ where: { service_id: serviceId } });
+  if (vm) {
+    throw new AppError(
+      'This service already has a VM deployment. A service can only use one compute option — VM or EKS, not both. Delete the VM deployment first if you want to switch to EKS.',
+      409
+    );
+  }
+}
+
 async function createCluster(userId, serviceId, data) {
   await getOwnedService(serviceId, userId);
   await assertNetworkExists(serviceId);
+  await assertNoVmDeployment(serviceId);
 
   const existing = await EksCluster.findOne({ where: { service_id: serviceId } });
   if (existing) {
@@ -173,6 +192,21 @@ async function getGeneratorConfig(userId, clusterId) {
   return toGeneratorConfig(cluster);
 }
 
+/**
+ * Looks up the EksCluster row by service_id rather than by the record's
+ * own id — used by the unified /infra/terraform/services/:serviceId/generate
+ * endpoint to check whether an EKS cluster has been configured (written to
+ * the DB) for this service at all. Returns null rather than throwing when
+ * none exists — EKS is optional per service, so "not configured yet" just
+ * means the caller skips rendering the eks module, it isn't an error.
+ */
+async function getGeneratorConfigForService(userId, serviceId) {
+  await getOwnedService(serviceId, userId);
+  const cluster = await EksCluster.findOne({ where: { service_id: serviceId } });
+  if (!cluster) return null;
+  return toGeneratorConfig(cluster);
+}
+
 module.exports = {
   createCluster,
   listClusters,
@@ -180,5 +214,6 @@ module.exports = {
   updateCluster,
   deleteCluster,
   getGeneratorConfig,
+  getGeneratorConfigForService,
   toGeneratorConfig,
 };
