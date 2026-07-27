@@ -1,8 +1,3 @@
-// NOTE: jest.mock calls are placed BEFORE any require() of the real modules
-// below. This project's jest config does not run files through babel, so
-// jest.mock calls are NOT auto-hoisted the way they would be with
-// babel-jest -- ordering matters here.
-
 jest.mock(
   '../service.model',
   () => ({
@@ -26,13 +21,7 @@ jest.mock('../../projects/projects.model', () => ({
 
 jest.mock(
   '../../../core/utils/AppError',
-  () =>
-    class AppError extends Error {
-      constructor(message, statusCode) {
-        super(message);
-        this.statusCode = statusCode;
-      }
-    },
+  () => require('../../../core/test-utils/mocks.AppError'),
   { virtual: true }
 );
 
