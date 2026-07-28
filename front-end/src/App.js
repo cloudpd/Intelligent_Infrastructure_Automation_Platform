@@ -33,7 +33,8 @@ import DockerizePage from './Components/Dockerize/DockerizePage.jsx';
 // import ProductBrand from './Components/Brands/ProductBrand';
 import KubernetesWizard from './Components/Kubernetes/KubernetesWizard.jsx';
 import CIServicePage from './Components/ci-service/CIServicePage.jsx';
-
+import TerraformSetupWizard from './Components/Terraform/TerraformSetupWizard.jsx';
+import TerraformConfiguration from './Components/Terraform/TerraformConfiguration.jsx';
 
 
 
@@ -48,9 +49,17 @@ function App() {
           path: "/our-app", element:
             <ProtectedRoute>
               {/* <WishContextProvider> */}
-                <Home />
+              <Home />
               {/* </WishContextProvider> */}
             </ProtectedRoute>
+        },
+        {
+          path: '/services/:serviceId/terraform-setup', element:
+            <ProtectedRoute><TerraformSetupWizard /></ProtectedRoute>
+        },
+        {
+          path: '/services/:serviceId/terraform-configuration', element:
+            <ProtectedRoute><TerraformConfiguration /></ProtectedRoute>
         },
 
         {
@@ -58,7 +67,7 @@ function App() {
 
             <ProtectedRoute>
               {/* <WishContextProvider> */}
-                <Home />
+              <Home />
               {/* </WishContextProvider> */}
             </ProtectedRoute>
         },
@@ -66,7 +75,7 @@ function App() {
           path: '/projects', element:
             <ProtectedRoute>
               {/* <WishContextProvider> */}
-                <Projects />
+              <Projects />
               {/* </WishContextProvider> */}
             </ProtectedRoute>
         },
@@ -80,7 +89,7 @@ function App() {
           path: '/services', element:
             <ProtectedRoute>
               {/* <WishContextProvider> */}
-                <Services />
+              <Services />
               {/* </WishContextProvider> */}
             </ProtectedRoute>
         },
@@ -108,13 +117,13 @@ function App() {
               <KubernetesWizard />
             </ProtectedRoute>
         },
-                {
+        {
           path: '/k8s', element:
             <ProtectedRoute>
               <KubernetesWizard />
             </ProtectedRoute>
         },
-                // {
+        // {
         //   path: '/wishlist', element:
         //     <ProtectedRoute>
         //       {/* <WishContextProvider> */}
@@ -174,8 +183,8 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           {/* <CartContextProvider> */}
-            <RouterProvider router={routes} />
-            {/* <ToastContainer /> */}
+          <RouterProvider router={routes} />
+          {/* <ToastContainer /> */}
           {/* </CartContextProvider> */}
         </AuthProvider>
       </ThemeProvider>

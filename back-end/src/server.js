@@ -8,6 +8,7 @@ require('./modules/ci/ci.model');
 require('./modules/infra/network/network.model');
 require('./modules/infra/ecr/ecr.model');
 require('./modules/infra/vm/vm.model');
+require('./modules/infra/terraform-state/terraformState.model');
 
 const PORT = process.env.PORT || 5000;
 

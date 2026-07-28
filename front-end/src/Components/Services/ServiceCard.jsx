@@ -23,7 +23,7 @@ export default function ServiceCard({ service, projectId }) {
         <p className='service-label'><strong>Branch:</strong> {branch}</p>
       </div>
       <div className='service-card__footer'>
-        <Link to={`/services/${id}/dockerize`} className='project-button project-button--primary service-deploy-button'>
+        <Link to={`/services/${id}/terraform-setup`} className='project-button project-button--primary service-deploy-button'>
           Go through the deployment process
         </Link>
 

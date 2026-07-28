@@ -14,6 +14,7 @@ const infraVmRoutes = require('./modules/infra/vm/vm.routes');
 
 const infraTerraformRoutes = require('./modules/infra/terraform/terraform.routes');
 const awsRoutes = require('./modules/aws/aws.routes');
+const terraformStateRoutes = require('./modules/infra/terraform-state/terraformState.routes');
 
 const cors = require("cors") ;
 const app = express();
@@ -26,7 +27,7 @@ app.use(express.json());
 app.use('/services', ciRoutes);
 
 app.use('/services', k8sRoutes);
-
+app.use('/terraform', terraformStateRoutes);
 app.use('/auth', authRoutes);
 app.use('/projects', projectsRoutes);
 app.use('/services', servicesRoutes);

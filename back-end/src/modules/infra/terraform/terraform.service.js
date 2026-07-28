@@ -181,7 +181,7 @@ function generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig }) 
  * /infra/terraform/services/:serviceId/generate endpoint so the caller
  * doesn't have to know in advance which modules exist for a service.
  */
-function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConfig, eksConfig, vmConfig }) {
+function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConfig, eksConfig, vmConfig, stateBucketOverride}) {
   if (!networkConfig || !networkConfig.cidr) {
     throw new AppError('This service has no Network module yet — create one before generating Terraform files', 422);
   }
@@ -209,7 +209,7 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
     serviceSlug,
     environment,
     awsRegion,
-    stateBucket: process.env.TF_STATE_BUCKET,
+    stateBucket:  stateBucketOverride || process.env.TF_STATE_BUCKET,
     lockTable: process.env.TF_LOCK_TABLE,
   };
 
