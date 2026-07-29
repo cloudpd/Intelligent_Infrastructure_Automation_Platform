@@ -59,6 +59,16 @@ const TerraformState = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    // ECR Repository name (e.g. "my-service-repo")
+    ecr_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // Full ECR Repository URL (e.g. "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-service-repo")
+    ecr_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     // Null until the Terraform Configuration step is completed.
     deployment_type: {
       type: DataTypes.ENUM('eks', 'vm'),

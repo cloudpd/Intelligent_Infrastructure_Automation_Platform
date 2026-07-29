@@ -48,6 +48,8 @@ async function getStateController(req, res, next) {
         s3Bucket: state.s3_bucket,
         lockTable: state.lock_table,
         useEcr: state.use_ecr,
+        ecrName: state.ecr_name,
+        ecrUrl: state.ecr_url,
         deploymentType: state.deployment_type,
         generated: state.generated,
         applied: state.applied,
