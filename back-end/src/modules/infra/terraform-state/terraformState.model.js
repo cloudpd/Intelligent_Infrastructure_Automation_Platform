@@ -49,6 +49,11 @@ const TerraformState = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    // Optional DynamoDB table name for Terraform state locking.
+    lock_table: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     use_ecr: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

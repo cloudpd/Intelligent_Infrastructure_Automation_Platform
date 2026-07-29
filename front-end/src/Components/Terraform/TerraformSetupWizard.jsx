@@ -25,6 +25,7 @@ export default function TerraformSetupWizard() {
 
   // Step 2 — Terraform backend
   const [s3Bucket, setS3Bucket] = useState('');
+  const [lockTable, setLockTable] = useState('');
 
   // Step 3 — Registry
   const [useEcr, setUseEcr] = useState(true);
@@ -118,6 +119,7 @@ export default function TerraformSetupWizard() {
           serviceId,
           awsCredentialId: selectedCredentialId,
           s3Bucket: s3Bucket.trim(),
+          lockTable: lockTable.trim() || null,
           useEcr,
         }),
       });
@@ -238,6 +240,15 @@ export default function TerraformSetupWizard() {
               placeholder='s3://terraform-state-prod'
               value={s3Bucket}
               onChange={(e) => setS3Bucket(e.target.value)}
+            />
+            <label className='terraform-field-label' htmlFor='lockTable'>DynamoDB Lock Table (Optional)</label>
+            <input
+              id='lockTable'
+              className='terraform-input'
+              type='text'
+              placeholder='terraform-locks'
+              value={lockTable}
+              onChange={(e) => setLockTable(e.target.value)}
             />
             {error && <p className='terraform-error'>{error}</p>}
             <div className='terraform-actions'>

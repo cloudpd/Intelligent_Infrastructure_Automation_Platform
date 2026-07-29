@@ -46,6 +46,7 @@ async function getStateController(req, res, next) {
         serviceId: state.service_id,
         awsCredentialId: state.aws_credential_id,
         s3Bucket: state.s3_bucket,
+        lockTable: state.lock_table,
         useEcr: state.use_ecr,
         deploymentType: state.deployment_type,
         generated: state.generated,

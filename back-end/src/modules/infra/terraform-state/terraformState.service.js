@@ -168,7 +168,7 @@ async function getOwnedState(serviceId, userId) {
  * wizard's frontend always sends one now (a credential is picked or
  * created before the user can even reach the S3 step).
  */
-async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr }) {
+async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, lockTable, useEcr }) {
   await getOwnedService(serviceId, userId);
 
   if (awsCredentialId) {
@@ -181,6 +181,7 @@ async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr 
   if (state) {
     if (awsCredentialId) state.aws_credential_id = awsCredentialId;
     state.s3_bucket = s3Bucket;
+    state.lock_table = lockTable || null;
     state.use_ecr = useEcr;
     state.generated = false;
     await state.save();
@@ -189,6 +190,7 @@ async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr 
       service_id: serviceId,
       aws_credential_id: awsCredentialId || null,
       s3_bucket: s3Bucket,
+      lock_table: lockTable || null,
       use_ecr: useEcr,
     });
   }
@@ -265,9 +267,9 @@ async function generate(userId, { serviceId, serviceSlug, environment = 'dev' })
     ecrConfig,
     eksConfig,
     vmConfig,
-    // Per-service backend override from the wizard, instead of the
-    // global TF_STATE_BUCKET env var the existing generator falls back to.
+    // Per-service backend options from the wizard in terraform_states table.
     stateBucketOverride: state.s3_bucket,
+    lockTableOverride: state.lock_table,
   });
 
   const outputDir = path.join(process.cwd(), 'generated', finalSlug, environment);
