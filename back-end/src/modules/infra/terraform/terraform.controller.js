@@ -6,7 +6,7 @@ const networkService = require('../network/network.service');
 const ecrService = require('../ecr/ecr.service');
 const eksService = require('../EKS/eks.service');
 const vmService = require('../vm/vm.service');
-
+const awsService = require('../../aws/aws.service');
 /**
  * POST /infra/terraform/vpcs/:vpcId/generate
  * Body: { serviceSlug, environment }
@@ -253,10 +253,65 @@ async function generateServiceFiles(req, res, next) {
   }
 }
 
+async function applyVmFiles(req, res, next) {
+  try {
+    const vmId = req.params.vmId || req.body.vmId || req.query.vmId;
+    const { serviceSlug = 'service', environment = 'dev', awsCredentialId } = req.body;
+
+    if (!vmId) {
+      return res.status(400).json({ success: false, message: 'vmId is required' });
+    }
+
+    if (!awsCredentialId) {
+      return res.status(400).json({ success: false, message: 'awsCredentialId is required' });
+    }
+
+    const vm = await vmService.getOwnedVm(vmId, req.user.id);
+
+    if (vm.status === 'applying') {
+      return res.status(409).json({ success: false, message: 'This VM is already being applied' });
+    }
+
+    const outputDir = path.join(process.cwd(), 'generated', serviceSlug, environment);
+    if (!fs.existsSync(path.join(outputDir, 'main.tf'))) {
+      return res.status(422).json({ success: false, message: 'No generated Terraform files found — run /generate first' });
+    }
+
+    const creds = await awsService.getDecryptedCredential(req.user.id, awsCredentialId);
+
+    await vmService.markApplying(vmId);
+
+    // Respond immediately — the apply itself keeps running after this
+    res.status(202).json({ success: true, message: 'Terraform apply started', status: 'applying' });
+
+    // Background work — deliberately not awaited before the response above
+    terraformService
+      .applyGeneratedFiles({
+        outputDir,
+        awsAccessKeyId: creds.access_key,
+        awsSecretAccessKey: creds.secret_key,
+        awsRegion: vm.region,
+      })
+      .then((outputs) => {
+        return vmService.markApplied(vmId, {
+          instanceId: outputs.vm_instance_id?.value,
+          publicIp: outputs.vm_public_ip?.value,
+        });
+      })
+      .catch((err) => {
+        console.error(`Terraform apply failed for VM ${vmId}:`, err.message);
+        return vmService.markFailed(vmId, err.message);
+      });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   generateNetworkFiles,
   generateEcrFiles,
   generateEksFiles,
   generateVmFiles,
   generateServiceFiles,
+  applyVmFiles,
 };

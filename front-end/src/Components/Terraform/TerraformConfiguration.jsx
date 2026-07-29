@@ -16,6 +16,9 @@ export default function TerraformConfiguration() {
   const [savingDeployment, setSavingDeployment] = useState(false);
 
   const [generating, setGenerating] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyPhase, setApplyPhase] = useState('idle');
+  const [applyProgress, setApplyProgress] = useState(0);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
@@ -92,7 +95,135 @@ export default function TerraformConfiguration() {
     }
   }
 
+  async function handleApply() {
+    setApplying(true);
+    setActionError('');
+    setActionSuccess('');
+    setApplyPhase('initializing');
+    setApplyProgress(8);
+
+    const progressTimer = window.setInterval(() => {
+      setApplyProgress((current) => {
+        if (current >= 88) return current;
+        if (current < 30) return Math.min(current + 4, 30);
+        if (current < 70) return Math.min(current + 3, 70);
+        return Math.min(current + 2, 88);
+      });
+    }, 350);
+
+    try {
+      if (!state?.awsCredentialId) {
+        throw new Error('Choose an AWS credential in the Terraform setup wizard before applying.');
+      }
+      if (deploymentType !== 'vm') {
+        throw new Error('Terraform apply is currently available for VM deployments only.');
+      }
+      if (!state?.generated) {
+        throw new Error('Generate Terraform files first.');
+      }
+
+      setApplyPhase('preparing');
+      setApplyProgress(24);
+
+      const [vpcsRes, vmsRes] = await Promise.all([
+        fetch(`${API_URL}/infra/network/${serviceId}/vpcs`, { headers: authHeaders }),
+        fetch(`${API_URL}/infra/vm/${serviceId}/vms`, { headers: authHeaders }),
+      ]);
+
+      const [vpcsData, vmsData] = await Promise.all([
+        vpcsRes.json().catch(() => null),
+        vmsRes.json().catch(() => null),
+      ]);
+
+      if (!vpcsRes.ok) {
+        throw new Error(vpcsData?.message || `Request failed with status ${vpcsRes.status}`);
+      }
+      if (!vmsRes.ok) {
+        throw new Error(vmsData?.message || `Request failed with status ${vmsRes.status}`);
+      }
+
+      setApplyPhase('collecting');
+      setApplyProgress(56);
+
+      const vpc = Array.isArray(vpcsData?.data)
+        ? vpcsData.data.find((item) => item?.id) || vpcsData.data[0]
+        : null;
+      const vm = Array.isArray(vmsData?.data)
+        ? vmsData.data.find((item) => item?.id) || vmsData.data[0]
+        : null;
+
+      if (!vpc?.id) {
+        throw new Error('No VPC was found for this service.');
+      }
+      if (!vm?.id) {
+        throw new Error('No VM deployment was found for this service.');
+      }
+
+      setApplyPhase('applying');
+      setApplyProgress(78);
+
+      const res = await fetch(`${API_URL}/infra/terraform/vpcs/${vpc.id}/vms/${vm.id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          serviceSlug: 'service',
+          environment: 'dev',
+          awsCredentialId: state.awsCredentialId,
+          vmId: vm.id,
+          vpcId: vpc.id,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
+
+      setApplyPhase('completed');
+      setApplyProgress(100);
+      setActionSuccess(data.message || 'Terraform apply completed successfully. Your infrastructure is now running.');
+      fetchState();
+    } catch (err) {
+      setApplyPhase('error');
+      setApplyProgress(0);
+      setActionError(err.message || 'Could not apply Terraform files.');
+    } finally {
+      window.clearInterval(progressTimer);
+      setApplying(false);
+    }
+  }
+
   const setupComplete = Boolean(state?.s3Bucket) && Boolean(deploymentType);
+  const applyStatusCopy = {
+    initializing: {
+      title: 'Initializing Terraform apply',
+      badge: 'Preparing',
+      message: 'Validating your AWS settings and preparing the deployment workflow.',
+    },
+    preparing: {
+      title: 'Preparing infrastructure',
+      badge: 'Preparing',
+      message: 'Checking the selected resources and getting the deployment ready.',
+    },
+    collecting: {
+      title: 'Collecting resources',
+      badge: 'Fetching data',
+      message: 'Gathering the VPC and VM details needed for the apply step.',
+    },
+    applying: {
+      title: 'Applying infrastructure',
+      badge: 'In progress',
+      message: 'Terraform is creating or updating the requested resources now.',
+    },
+    completed: {
+      title: 'Apply completed',
+      badge: 'Success',
+      message: 'Your resources were applied successfully and are ready to use.',
+    },
+    error: {
+      title: 'Apply stalled',
+      badge: 'Needs attention',
+      message: 'The deployment did not finish successfully. Review the error and try again.',
+    },
+  };
+  const activeApplyStatus = applyPhase === 'idle' ? null : applyStatusCopy[applyPhase];
 
   return (
     <div className='projects-shell min-vh-100'>
@@ -155,6 +286,22 @@ export default function TerraformConfiguration() {
             Virtual Machine (Minikube)
           </label>
 
+          {activeApplyStatus && (
+            <div className={`terraform-status-card terraform-status-card--${applyPhase}`}>
+              <div className='terraform-status-header'>
+                <span className='terraform-status-title'>{activeApplyStatus.title}</span>
+                <span className='terraform-status-badge'>{activeApplyStatus.badge}</span>
+              </div>
+              <div className='terraform-progress-track'>
+                <div
+                  className={`terraform-progress-fill ${applyPhase === 'completed' ? 'terraform-progress-fill--completed' : ''}`}
+                  style={{ width: `${applyProgress}%` }}
+                />
+              </div>
+              <p className='terraform-status-message'>{activeApplyStatus.message}</p>
+            </div>
+          )}
+
           {actionError && <p className='terraform-error'>{actionError}</p>}
           {actionSuccess && <p className='terraform-success'>{actionSuccess}</p>}
 
@@ -167,8 +314,13 @@ export default function TerraformConfiguration() {
             >
               {generating ? 'Generating...' : 'Generate Terraform'}
             </button>
-            <button type='button' className='project-button project-button--ghost' disabled>
-              Run Terraform Apply (Coming Soon)
+            <button
+              type='button'
+              className='project-button project-button--ghost'
+              onClick={handleApply}
+              disabled={!setupComplete || generating || applying || !state?.generated || deploymentType !== 'vm'}
+            >
+              {applying ? (applyPhase === 'completed' ? 'Completed' : 'Applying...') : 'Run Terraform Apply'}
             </button>
           </div>
 

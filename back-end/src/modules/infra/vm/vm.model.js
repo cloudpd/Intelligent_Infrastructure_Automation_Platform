@@ -57,9 +57,13 @@ const VmDeployment = sequelize.define(
       defaultValue: false,
     },
     status: {
-      type: DataTypes.ENUM('pending', 'applied', 'destroyed'),
+      type: DataTypes.ENUM('pending', 'applying', 'applied', 'failed', 'destroyed'),
       allowNull: false,
       defaultValue: 'pending',
+    },
+    apply_error: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     // Populated only after a real apply — never set by the user directly.
     instance_id: {

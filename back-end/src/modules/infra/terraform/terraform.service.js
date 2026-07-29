@@ -5,6 +5,7 @@ const { writeFiles, copyDir } = require('./utils/writeFiles');
 const { generateMainTf } = require('./generators/main.generator');
 const { generateVariablesTf } = require('./generators/variables.generator');
 const { generateOutputsTf } = require('./generators/outputs.generator');
+const { run } = require('./utils/execTerraform');
 
 const TEMPLATE_DIR = path.join(__dirname, 'template');
 
@@ -266,6 +267,26 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
   }
 }
 
+/**
+ * Runs `terraform init` + `terraform apply -auto-approve` in an already-
+ * generated output directory, using the given AWS credentials — never
+ * the server's own. Returns the module's outputs (instance_id, public_ip, etc.)
+ * as a parsed object on success.
+ */
+async function applyGeneratedFiles({ outputDir, awsAccessKeyId, awsSecretAccessKey, awsRegion }) {
+  const env = {
+    AWS_ACCESS_KEY_ID: awsAccessKeyId,
+    AWS_SECRET_ACCESS_KEY: awsSecretAccessKey,
+    AWS_DEFAULT_REGION: awsRegion,
+  };
+
+  await run(['init', '-input=false'], { cwd: outputDir, env });
+  await run(['apply', '-auto-approve', '-input=false'], { cwd: outputDir, env });
+
+  const { stdout } = await run(['output', '-json'], { cwd: outputDir, env });
+  return JSON.parse(stdout);
+}
+
 module.exports = {
   generateNetworkFiles,
   generateEcrFiles,
@@ -274,4 +295,5 @@ module.exports = {
   generateServiceFiles,
   writeToDisk,
   TEMPLATE_DIR,
+  applyGeneratedFiles,
 };

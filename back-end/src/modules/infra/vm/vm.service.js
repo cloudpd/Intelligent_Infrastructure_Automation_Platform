@@ -155,6 +155,21 @@ async function getGeneratorConfigForService(userId, serviceId, { serviceSlug, en
   return toGeneratorConfig(vm, { serviceSlug, environment });
 }
 
+async function markApplying(vmId) {
+  await VmDeployment.update({ status: 'applying', apply_error: null }, { where: { id: vmId } });
+}
+
+async function markApplied(vmId, { instanceId, publicIp }) {
+  await VmDeployment.update(
+    { status: 'applied', instance_id: instanceId, public_ip: publicIp },
+    { where: { id: vmId } }
+  );
+}
+
+async function markFailed(vmId, errorMessage) {
+  await VmDeployment.update({ status: 'failed', apply_error: errorMessage }, { where: { id: vmId } });
+}
+
 module.exports = {
   createVm,
   listVms,
@@ -164,4 +179,8 @@ module.exports = {
   getGeneratorConfig,
   getGeneratorConfigForService,
   toGeneratorConfig,
+  markApplying,
+  markApplied,
+  markFailed,
+  getOwnedVm
 };
