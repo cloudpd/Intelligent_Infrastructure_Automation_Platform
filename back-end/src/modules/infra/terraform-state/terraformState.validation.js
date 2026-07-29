@@ -12,6 +12,7 @@ const setupSchema = Joi.object({
     'string.empty': 's3Bucket is required',
     'any.required': 's3Bucket is required',
   }),
+  lockTable: Joi.string().max(255).optional().allow('', null),
   useEcr: Joi.boolean().required().messages({
     'any.required': 'useEcr is required',
   }),

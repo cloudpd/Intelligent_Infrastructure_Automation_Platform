@@ -17,9 +17,8 @@ async function start() {
     await sequelize.authenticate();
     console.log('✅ Connected to MySQL');
 
-    // await sequelize.sync({ alter: true });
-    await sequelize.sync({ alter: true });
-    console.log('✅ Users table synced');
+    // Table sync handled by migrations or standard startup
+    console.log('✅ Users table ready');
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);

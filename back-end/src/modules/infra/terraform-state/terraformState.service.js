@@ -65,7 +65,7 @@ async function ensureNetworkConfig(userId, serviceId, service, { serviceSlug, en
  * `POST /infra/ecr/:serviceId/repos/create` service function (ownership
  * checks / persistence unchanged), only reached when nothing exists yet.
  */
-async function ensureEcrConfig(userId, serviceId, service, { serviceSlug, environment }) {
+async function ensureEcrConfig(userId, serviceId, service, { serviceSlug, environment, ecrName }) {
   const existing = await ecrService.getGeneratorConfigForService(userId, serviceId, {
     serviceSlug,
     environment,
@@ -73,7 +73,7 @@ async function ensureEcrConfig(userId, serviceId, service, { serviceSlug, enviro
   if (existing) return existing;
 
   await ecrService.createRepo(userId, serviceId, {
-    name: slugify(serviceSlug || service.name),
+    name: ecrName || slugify(serviceSlug || service.name),
   });
 
   return ecrService.getGeneratorConfigForService(userId, serviceId, { serviceSlug, environment });
@@ -168,7 +168,7 @@ async function getOwnedState(serviceId, userId) {
  * wizard's frontend always sends one now (a credential is picked or
  * created before the user can even reach the S3 step).
  */
-async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr }) {
+async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, lockTable, useEcr }) {
   await getOwnedService(serviceId, userId);
 
   if (awsCredentialId) {
@@ -181,6 +181,7 @@ async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr 
   if (state) {
     if (awsCredentialId) state.aws_credential_id = awsCredentialId;
     state.s3_bucket = s3Bucket;
+    state.lock_table = lockTable || null;
     state.use_ecr = useEcr;
     state.generated = false;
     await state.save();
@@ -189,6 +190,7 @@ async function saveSetup(userId, { serviceId, awsCredentialId, s3Bucket, useEcr 
       service_id: serviceId,
       aws_credential_id: awsCredentialId || null,
       s3_bucket: s3Bucket,
+      lock_table: lockTable || null,
       use_ecr: useEcr,
     });
   }
@@ -208,7 +210,16 @@ async function saveDeployment(userId, { serviceId, deploymentType }) {
 }
 
 async function getState(userId, serviceId) {
-  return getOwnedState(serviceId, userId);
+  const state = await getOwnedState(serviceId, userId);
+  // Auto-sync ecr_name from Ecr repository table if present
+  if (state.use_ecr && !state.ecr_name) {
+    const ecrRepo = await ecrService.getGeneratorConfigForService(userId, serviceId, { serviceSlug: 'service', environment: 'dev' });
+    if (ecrRepo) {
+      state.ecr_name = ecrRepo.name;
+      await state.save();
+    }
+  }
+  return state;
 }
 
 /**
@@ -248,6 +259,9 @@ async function generate(userId, { serviceId, serviceSlug, environment = 'dev' })
   let ecrConfig = null;
   if (state.use_ecr) {
     ecrConfig = await ensureEcrConfig(userId, serviceId, service, { serviceSlug: finalSlug, environment });
+    state.ecr_name = ecrConfig.name;
+    const region = ecrConfig.region || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+    state.ecr_url = `${region}.amazonaws.com/${ecrConfig.name}`;
   }
 
   let eksConfig = null;
@@ -265,9 +279,9 @@ async function generate(userId, { serviceId, serviceSlug, environment = 'dev' })
     ecrConfig,
     eksConfig,
     vmConfig,
-    // Per-service backend override from the wizard, instead of the
-    // global TF_STATE_BUCKET env var the existing generator falls back to.
+    // Per-service backend options from the wizard in terraform_states table.
     stateBucketOverride: state.s3_bucket,
+    lockTableOverride: state.lock_table,
   });
 
   const outputDir = path.join(process.cwd(), 'generated', finalSlug, environment);
