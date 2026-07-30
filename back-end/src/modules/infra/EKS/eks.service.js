@@ -147,6 +147,25 @@ async function deleteCluster(userId, clusterId) {
   await cluster.destroy();
 }
 
+async function markApplying(clusterId) {
+  await EksCluster.update({ status: 'applying', apply_error: null }, { where: { id: clusterId } });
+}
+
+async function markApplied(clusterId, { clusterEndpoint, clusterName }) {
+  await EksCluster.update(
+    {
+      status: 'applied',
+      cluster_endpoint: clusterEndpoint,
+      cluster_name: clusterName,
+    },
+    { where: { id: clusterId } }
+  );
+}
+
+async function markFailed(clusterId, errorMessage) {
+  await EksCluster.update({ status: 'failed', apply_error: errorMessage }, { where: { id: clusterId } });
+}
+
 /**
  * Shapes one EksCluster row into exactly what the Terraform generator
  * (terraform.service.js / snippets/eks.hbs) needs. This is the contract
@@ -216,4 +235,8 @@ module.exports = {
   getGeneratorConfig,
   getGeneratorConfigForService,
   toGeneratorConfig,
+  getOwnedCluster,
+  markApplying,
+  markApplied,
+  markFailed,
 };

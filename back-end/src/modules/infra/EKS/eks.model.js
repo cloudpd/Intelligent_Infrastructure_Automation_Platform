@@ -91,9 +91,17 @@ const EksCluster = sequelize.define(
     },
 
     status: {
-      type: DataTypes.ENUM("pending", "applied", "destroyed"),
+      type: DataTypes.ENUM("pending", "applying", "applied", "failed", "destroyed"),
       allowNull: false,
       defaultValue: "pending",
+    },
+    apply_error: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    cluster_endpoint: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

@@ -7,6 +7,51 @@ const ecrService = require('../ecr/ecr.service');
 const eksService = require('../EKS/eks.service');
 const vmService = require('../vm/vm.service');
 const awsService = require('../../aws/aws.service');
+
+async function applyTerraformResources({
+  resourceType,
+  resourceId,
+  userId,
+  serviceSlug,
+  environment,
+  awsCredentialId,
+  region,
+  markApplying,
+  markApplied,
+  markFailed,
+  getOwnedResource,
+  outputDir,
+}) {
+  if (!resourceId) {
+    throw new AppError(`${resourceType}Id is required`, 400);
+  }
+
+  if (!awsCredentialId) {
+    throw new AppError('awsCredentialId is required', 400);
+  }
+
+  const resource = await getOwnedResource(resourceId, userId);
+
+  if (resource.status === 'applying') {
+    throw new AppError(`This ${resourceType} is already being applied`, 409);
+  }
+
+  const generatedDir = path.join(process.cwd(), 'generated', serviceSlug, environment);
+  if (!fs.existsSync(path.join(generatedDir, 'main.tf'))) {
+    throw new AppError('No generated Terraform files found — run /generate first', 422);
+  }
+
+  const creds = await awsService.getDecryptedCredential(userId, awsCredentialId);
+
+  await markApplying(resourceId);
+
+  return {
+    resource,
+    generatedDir,
+    creds,
+    region,
+  };
+}
 /**
  * POST /infra/terraform/vpcs/:vpcId/generate
  * Body: { serviceSlug, environment }
@@ -258,28 +303,22 @@ async function applyVmFiles(req, res, next) {
     const vmId = req.params.vmId || req.body.vmId || req.query.vmId;
     const { serviceSlug = 'service', environment = 'dev', awsCredentialId } = req.body;
 
-    if (!vmId) {
-      return res.status(400).json({ success: false, message: 'vmId is required' });
-    }
+    const prepared = await applyTerraformResources({
+      resourceType: 'VM',
+      resourceId: vmId,
+      userId: req.user.id,
+      serviceSlug,
+      environment,
+      awsCredentialId,
+      region: null,
+      markApplying: vmService.markApplying,
+      markApplied: vmService.markApplied,
+      markFailed: vmService.markFailed,
+      getOwnedResource: vmService.getOwnedVm,
+      outputDir: path.join(process.cwd(), 'generated', serviceSlug, environment),
+    });
 
-    if (!awsCredentialId) {
-      return res.status(400).json({ success: false, message: 'awsCredentialId is required' });
-    }
-
-    const vm = await vmService.getOwnedVm(vmId, req.user.id);
-
-    if (vm.status === 'applying') {
-      return res.status(409).json({ success: false, message: 'This VM is already being applied' });
-    }
-
-    const outputDir = path.join(process.cwd(), 'generated', serviceSlug, environment);
-    if (!fs.existsSync(path.join(outputDir, 'main.tf'))) {
-      return res.status(422).json({ success: false, message: 'No generated Terraform files found — run /generate first' });
-    }
-
-    const creds = await awsService.getDecryptedCredential(req.user.id, awsCredentialId);
-
-    await vmService.markApplying(vmId);
+    const outputDir = prepared.generatedDir;
 
     // Respond immediately — the apply itself keeps running after this
     res.status(202).json({ success: true, message: 'Terraform apply started', status: 'applying' });
@@ -288,9 +327,9 @@ async function applyVmFiles(req, res, next) {
     terraformService
       .applyGeneratedFiles({
         outputDir,
-        awsAccessKeyId: creds.access_key,
-        awsSecretAccessKey: creds.secret_key,
-        awsRegion: vm.region,
+        awsAccessKeyId: prepared.creds.access_key,
+        awsSecretAccessKey: prepared.creds.secret_key,
+        awsRegion: prepared.resource.region,
       })
       .then((outputs) => {
         return vmService.markApplied(vmId, {
@@ -307,6 +346,63 @@ async function applyVmFiles(req, res, next) {
   }
 }
 
+async function applyEksFiles(req, res, next) {
+  try {
+    const clusterId = req.params.clusterId || req.body.clusterId || req.query.clusterId;
+    const { serviceSlug = 'service', environment = 'dev', awsCredentialId } = req.body;
+
+    const prepared = await applyTerraformResources({
+      resourceType: 'EKS cluster',
+      resourceId: clusterId,
+      userId: req.user.id,
+      serviceSlug,
+      environment,
+      awsCredentialId,
+      markApplying: async (id) => {
+        const { markApplying: markClusterApplying } = require('../EKS/eks.service');
+        return markClusterApplying(id);
+      },
+      markApplied: async (id, metadata) => {
+        const { markApplied: markClusterApplied } = require('../EKS/eks.service');
+        return markClusterApplied(id, metadata);
+      },
+      markFailed: async (id, error) => {
+        const { markFailed: markClusterFailed } = require('../EKS/eks.service');
+        return markClusterFailed(id, error);
+      },
+      getOwnedResource: async (resourceId, userId) => {
+        const { getOwnedCluster } = require('../EKS/eks.service');
+        return getOwnedCluster(resourceId, userId);
+      },
+      outputDir: path.join(process.cwd(), 'generated', serviceSlug, environment),
+    });
+
+    const outputDir = prepared.generatedDir;
+
+    res.status(202).json({ success: true, message: 'Terraform apply started', status: 'applying' });
+
+    terraformService
+      .applyGeneratedFiles({
+        outputDir,
+        awsAccessKeyId: prepared.creds.access_key,
+        awsSecretAccessKey: prepared.creds.secret_key,
+        awsRegion: prepared.resource.region,
+      })
+      .then((outputs) => {
+        return require('../EKS/eks.service').markApplied(clusterId, {
+          clusterEndpoint: outputs.cluster_endpoint?.value,
+          clusterName: outputs.cluster_name?.value,
+        });
+      })
+      .catch((err) => {
+        console.error(`Terraform apply failed for EKS cluster ${clusterId}:`, err.message);
+        return require('../EKS/eks.service').markFailed(clusterId, err.message);
+      });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   generateNetworkFiles,
   generateEcrFiles,
@@ -314,4 +410,5 @@ module.exports = {
   generateVmFiles,
   generateServiceFiles,
   applyVmFiles,
+  applyEksFiles,
 };

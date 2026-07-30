@@ -10,7 +10,8 @@ router.post('/vpcs/:vpcId/generate', terraformController.generateNetworkFiles);
 router.post('/repos/:repoId/generate', terraformController.generateEcrFiles);
 router.post('/vpcs/:vpcId/clusters/:clusterId/generate', terraformController.generateEksFiles);
 router.post('/vpcs/:vpcId/vms/:vmId/generate', terraformController.generateVmFiles);
-router.post('/vpcs/:vpcId/vms/:i/apply', terraformController.applyVmFiles);
+router.post('/vpcs/:vpcId/vms/:vmId/apply', terraformController.applyVmFiles);
+router.post('/vpcs/:vpcId/clusters/:clusterId/apply', terraformController.applyEksFiles);
 
 /**
  * Unified generate: always renders Network for the service, and

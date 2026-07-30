@@ -2,6 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './Terraform.css';
+import BackendSummary from './components/BackendSummary';
+import DeploymentTypeSelector from './components/DeploymentTypeSelector';
+import ApplyStatusCard from './components/ApplyStatusCard';
+import VmDeploymentForm from './components/VmDeploymentForm';
+import EksClusterForm from './components/EksClusterForm';
+import TerraformActions from './components/TerraformActions';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -21,6 +27,40 @@ export default function TerraformConfiguration() {
   const [applyProgress, setApplyProgress] = useState(0);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+
+  const [vmForm, setVmForm] = useState({
+    name: '',
+    region: 'us-east-1',
+    instance_type: 't3.micro',
+    kind_cluster_name: 'kind',
+    container_port: 3000,
+    host_port: 80,
+    allow_ssh: false,
+  });
+  const [vmCreating, setVmCreating] = useState(false);
+
+  const [eksForm, setEksForm] = useState({
+    clusterName: 'demo-cluster',
+    clusterVersion: '1.35',
+    region: 'eu-north-1',
+    nodeGroups: {
+      general: {
+        instanceTypes: ['c7i-flex.large'],
+        capacityType: 'ON_DEMAND',
+        desiredSize: 2,
+        minSize: 1,
+        maxSize: 4,
+        diskSize: 20,
+      },
+    },
+    clusterAdmins: [{ userName: '', userAccountId: '' }],
+    grafanaAdminPassword: 'changeme123',
+    enableEbsCsi: true,
+    enableAlbController: true,
+    enableExternalDns: true,
+    enableExternalSecrets: true,
+  });
+  const [eksCreating, setEksCreating] = useState(false);
 
   const authHeaders = useMemo(() => {
     const token = localStorage.getItem('token');
@@ -74,19 +114,141 @@ export default function TerraformConfiguration() {
     }
   }
 
-  async function handleGenerate() {
-    setGenerating(true);
+  async function handleGenerateVm() {
+    setVmCreating(true);
     setActionError('');
     setActionSuccess('');
+
     try {
-      const res = await fetch(`${API_URL}/terraform/generate`, {
+      const createRes = await fetch(`${API_URL}/infra/vm/${serviceId}/vms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(vmForm),
+      });
+      const createData = await createRes.json().catch(() => null);
+      if (!createRes.ok) throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
+
+      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ serviceSlug: 'service', environment: 'dev' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
+
+      setActionSuccess('VM generated successfully.');
+      fetchState();
+    } catch (err) {
+      setActionError(err.message || 'Could not generate VM files.');
+    } finally {
+      setVmCreating(false);
+      setGenerating(false);
+    }
+  }
+
+  async function handleGenerateEks() {
+    setEksCreating(true);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const createRes = await fetch(`${API_URL}/infra/eks/${serviceId}/clusters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          ...eksForm,
+          clusterAdmins: eksForm.clusterAdmins.map((admin) => ({
+            userName: admin.userName,
+            userAccountId: admin.userAccountId,
+          })),
+        }),
+      });
+      const createData = await createRes.json().catch(() => null);
+      if (!createRes.ok) throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
+
+      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ serviceId }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
-      setActionSuccess('Terraform files generated successfully.');
+
+      setActionSuccess('EKS cluster generated successfully.');
+      fetchState();
+    } catch (err) {
+      setActionError(err.message || 'Could not generate EKS cluster files.');
+    } finally {
+      setEksCreating(false);
+      setGenerating(false);
+    }
+  }
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setActionError('');
+    setActionSuccess('');
+    try {
+      if (deploymentType === 'vm') {
+        const createRes = await fetch(`${API_URL}/infra/vm/${serviceId}/vms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(vmForm),
+        });
+
+        if (createRes.status === 409) {
+          const createData = await createRes.json().catch(() => null);
+          const isHarmless = createData?.message?.includes('already has a VM deployment');
+          if (!isHarmless) {
+            throw new Error(createData?.message || 'Could not create VM deployment.');
+          }
+          // else: harmless "this exact VM already exists" — fall through and continue
+        } else if (createRes.status !== 200 && createRes.status !== 201) {
+          const createData = await createRes.json().catch(() => null);
+          throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
+        }
+      }
+
+      if (deploymentType === 'eks') {
+        const createRes = await fetch(`${API_URL}/infra/eks/${serviceId}/clusters`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({
+            ...eksForm,
+            clusterAdmins: eksForm.clusterAdmins.map((admin) => ({
+              userName: admin.userName,
+              userAccountId: admin.userAccountId,
+            })),
+          }),
+        });
+
+        if (createRes.status === 409) {
+          const createData = await createRes.json().catch(() => null);
+          const isHarmless = createData?.message?.includes('already has an EKS cluster');
+          if (!isHarmless) {
+            throw new Error(createData?.message || 'Could not create EKS cluster.');
+          }
+          // else: harmless "this exact cluster already exists" — fall through and continue
+        } else if (createRes.status !== 200 && createRes.status !== 201) {
+          const createData = await createRes.json().catch(() => null);
+          throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
+        }
+      }
+
+      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ serviceSlug: 'service', environment: 'dev' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
+      setActionSuccess(
+        deploymentType === 'vm'
+          ? 'VM deployment and Terraform files generated successfully.'
+          : deploymentType === 'eks'
+            ? 'EKS cluster and Terraform files generated successfully.'
+            : 'Terraform files generated successfully.'
+      );
       fetchState();
     } catch (err) {
       setActionError(err.message || 'Could not generate Terraform files.');
@@ -115,8 +277,8 @@ export default function TerraformConfiguration() {
       if (!state?.awsCredentialId) {
         throw new Error('Choose an AWS credential in the Terraform setup wizard before applying.');
       }
-      if (deploymentType !== 'vm') {
-        throw new Error('Terraform apply is currently available for VM deployments only.');
+      if (deploymentType !== 'vm' && deploymentType !== 'eks') {
+        throw new Error('Choose either an EKS cluster or a VM deployment before applying.');
       }
       if (!state?.generated) {
         throw new Error('Generate Terraform files first.');
@@ -125,21 +287,23 @@ export default function TerraformConfiguration() {
       setApplyPhase('preparing');
       setApplyProgress(24);
 
-      const [vpcsRes, vmsRes] = await Promise.all([
+      const [vpcsRes, secondaryRes] = await Promise.all([
         fetch(`${API_URL}/infra/network/${serviceId}/vpcs`, { headers: authHeaders }),
-        fetch(`${API_URL}/infra/vm/${serviceId}/vms`, { headers: authHeaders }),
+        deploymentType === 'eks'
+          ? fetch(`${API_URL}/infra/eks/${serviceId}/clusters`, { headers: authHeaders })
+          : fetch(`${API_URL}/infra/vm/${serviceId}/vms`, { headers: authHeaders }),
       ]);
 
-      const [vpcsData, vmsData] = await Promise.all([
+      const [vpcsData, secondaryData] = await Promise.all([
         vpcsRes.json().catch(() => null),
-        vmsRes.json().catch(() => null),
+        secondaryRes.json().catch(() => null),
       ]);
 
       if (!vpcsRes.ok) {
         throw new Error(vpcsData?.message || `Request failed with status ${vpcsRes.status}`);
       }
-      if (!vmsRes.ok) {
-        throw new Error(vmsData?.message || `Request failed with status ${vmsRes.status}`);
+      if (!secondaryRes.ok) {
+        throw new Error(secondaryData?.message || `Request failed with status ${secondaryRes.status}`);
       }
 
       setApplyPhase('collecting');
@@ -148,28 +312,32 @@ export default function TerraformConfiguration() {
       const vpc = Array.isArray(vpcsData?.data)
         ? vpcsData.data.find((item) => item?.id) || vpcsData.data[0]
         : null;
-      const vm = Array.isArray(vmsData?.data)
-        ? vmsData.data.find((item) => item?.id) || vmsData.data[0]
+      const target = Array.isArray(secondaryData?.data)
+        ? secondaryData.data.find((item) => item?.id) || secondaryData.data[0]
         : null;
 
       if (!vpc?.id) {
         throw new Error('No VPC was found for this service.');
       }
-      if (!vm?.id) {
-        throw new Error('No VM deployment was found for this service.');
+      if (!target?.id) {
+        throw new Error(deploymentType === 'eks' ? 'No EKS cluster was found for this service.' : 'No VM deployment was found for this service.');
       }
 
       setApplyPhase('applying');
       setApplyProgress(78);
 
-      const res = await fetch(`${API_URL}/infra/terraform/vpcs/${vpc.id}/vms/${vm.id}/apply`, {
+      const endpoint = deploymentType === 'eks'
+        ? `${API_URL}/infra/terraform/vpcs/${vpc.id}/clusters/${target.id}/apply`
+        : `${API_URL}/infra/terraform/vpcs/${vpc.id}/vms/${target.id}/apply`;
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           serviceSlug: 'service',
           environment: 'dev',
           awsCredentialId: state.awsCredentialId,
-          vmId: vm.id,
+          ...(deploymentType === 'eks' ? { clusterId: target.id } : { vmId: target.id }),
           vpcId: vpc.id,
         }),
       });
@@ -191,39 +359,6 @@ export default function TerraformConfiguration() {
   }
 
   const setupComplete = Boolean(state?.s3Bucket) && Boolean(deploymentType);
-  const applyStatusCopy = {
-    initializing: {
-      title: 'Initializing Terraform apply',
-      badge: 'Preparing',
-      message: 'Validating your AWS settings and preparing the deployment workflow.',
-    },
-    preparing: {
-      title: 'Preparing infrastructure',
-      badge: 'Preparing',
-      message: 'Checking the selected resources and getting the deployment ready.',
-    },
-    collecting: {
-      title: 'Collecting resources',
-      badge: 'Fetching data',
-      message: 'Gathering the VPC and VM details needed for the apply step.',
-    },
-    applying: {
-      title: 'Applying infrastructure',
-      badge: 'In progress',
-      message: 'Terraform is creating or updating the requested resources now.',
-    },
-    completed: {
-      title: 'Apply completed',
-      badge: 'Success',
-      message: 'Your resources were applied successfully and are ready to use.',
-    },
-    error: {
-      title: 'Apply stalled',
-      badge: 'Needs attention',
-      message: 'The deployment did not finish successfully. Review the error and try again.',
-    },
-  };
-  const activeApplyStatus = applyPhase === 'idle' ? null : applyStatusCopy[applyPhase];
 
   return (
     <div className='projects-shell min-vh-100'>
@@ -253,88 +388,48 @@ export default function TerraformConfiguration() {
 
       {!loading && !loadError && state && (
         <div className='terraform-wizard-card'>
-          <h2 className='terraform-step-title'>Backend</h2>
-          <p className='terraform-readonly-row'>
-            <strong>S3 Bucket:</strong> {state.s3Bucket}
-          </p>
-          {state.lockTable && (
-            <p className='terraform-readonly-row'>
-              <strong>DynamoDB Lock Table:</strong> {state.lockTable}
-            </p>
-          )}
-          <p className='terraform-readonly-row'>
-            <strong>Registry:</strong> {state.useEcr ? 'AWS ECR' : 'GitHub Container Registry'}
-          </p>
-          <p className='terraform-readonly-row'>
-            <strong>Configured</strong>
-          </p>
+          <BackendSummary state={state} />
 
-          <h2 className='terraform-step-title'>Deployment</h2>
-          <label className='terraform-radio'>
-            <input
-              type='radio'
-              name='deploymentType'
-              checked={deploymentType === 'eks'}
-              onChange={() => handleSaveDeployment('eks')}
-              disabled={savingDeployment}
-            />
-            Amazon EKS
-          </label>
-          <label className='terraform-radio'>
-            <input
-              type='radio'
-              name='deploymentType'
-              checked={deploymentType === 'vm'}
-              onChange={() => handleSaveDeployment('vm')}
-              disabled={savingDeployment}
-            />
-            Virtual Machine (Minikube)
-          </label>
+          <DeploymentTypeSelector
+            deploymentType={deploymentType}
+            onSelect={handleSaveDeployment}
+            disabled={savingDeployment}
+          />
 
-          {activeApplyStatus && (
-            <div className={`terraform-status-card terraform-status-card--${applyPhase}`}>
-              <div className='terraform-status-header'>
-                <span className='terraform-status-title'>{activeApplyStatus.title}</span>
-                <span className='terraform-status-badge'>{activeApplyStatus.badge}</span>
-              </div>
-              <div className='terraform-progress-track'>
-                <div
-                  className={`terraform-progress-fill ${applyPhase === 'completed' ? 'terraform-progress-fill--completed' : ''}`}
-                  style={{ width: `${applyProgress}%` }}
-                />
-              </div>
-              <p className='terraform-status-message'>{activeApplyStatus.message}</p>
-            </div>
-          )}
+          <ApplyStatusCard applyPhase={applyPhase} applyProgress={applyProgress} />
 
-          {actionError && <p className='terraform-error'>{actionError}</p>}
-          {actionSuccess && <p className='terraform-success'>{actionSuccess}</p>}
-
-          <div className='terraform-actions'>
-            <button
-              type='button'
-              className='project-button project-button--primary'
-              onClick={handleGenerate}
+          {deploymentType === 'vm' && (
+            <VmDeploymentForm
+              vmForm={vmForm}
+              setVmForm={setVmForm}
+              onGenerate={handleGenerateVm}
+              creating={vmCreating}
               disabled={!setupComplete || generating}
-            >
-              {generating ? 'Generating...' : 'Generate Terraform'}
-            </button>
-            <button
-              type='button'
-              className='project-button project-button--ghost'
-              onClick={handleApply}
-              disabled={!setupComplete || generating || applying || !state?.generated || deploymentType !== 'vm'}
-            >
-              {applying ? (applyPhase === 'completed' ? 'Completed' : 'Applying...') : 'Run Terraform Apply'}
-            </button>
-          </div>
-
-          {state.generated && (
-            <p className='terraform-readonly-row'>
-              Terraform files are generated. Continue to{' '}
-              <Link to={`/services/${serviceId}/dockerize`}>Docker workflow</Link>.
-            </p>
+            />
           )}
+
+          {deploymentType === 'eks' && (
+            <EksClusterForm
+              eksForm={eksForm}
+              setEksForm={setEksForm}
+              onGenerate={handleGenerateEks}
+              creating={eksCreating}
+              disabled={!setupComplete || generating}
+            />
+          )}
+
+          <TerraformActions
+            serviceId={serviceId}
+            setupComplete={setupComplete}
+            generating={generating}
+            applying={applying}
+            applyPhase={applyPhase}
+            state={state}
+            actionError={actionError}
+            actionSuccess={actionSuccess}
+            onGenerate={handleGenerate}
+            onApply={handleApply}
+          />
         </div>
       )}
     </div>
