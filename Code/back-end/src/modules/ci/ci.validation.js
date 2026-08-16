@@ -50,6 +50,9 @@ const ciConfigSchema = Joi.object({
   enableBuild: Joi.boolean().default(false).messages({
     'boolean.base': 'Enable Build must be true or false',
   }),
+  enableCD: Joi.boolean().default(false).messages({
+    'boolean.base': 'Enable CD must be true or false',
+  }),
   awsEcrRegion: Joi.string().optional().allow(null, ''),
 }).unknown(false);
 
@@ -93,7 +96,7 @@ async function validateRepository(userId, serviceId) {
     throw new AppError('You do not have permission to access this service', 403);
   }
 
- 
+
   const { owner, repo } = parseGithubUrl(service.repository_url);
 
 

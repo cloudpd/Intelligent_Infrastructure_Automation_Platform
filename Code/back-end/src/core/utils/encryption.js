@@ -1,7 +1,8 @@
+require('dotenv').config();
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
-const KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+const KEY = Buffer.from(process.env.ENCRYPTION_KEY || '', 'hex');
 
 function encrypt(plainText) {
   const iv = crypto.randomBytes(12);

@@ -53,6 +53,11 @@ const CIConfig = sequelize.define(
       defaultValue: false,
     },
 
+    enable_cd: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
   },
   {
     tableName: 'ci_configs',

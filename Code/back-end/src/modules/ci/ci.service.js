@@ -8,18 +8,21 @@ const { CIConfig } = require('./ci.model');
 
 const { decrypt } = require('../../core/utils/encryption');
 const WorkflowBuilder = require('./ci.workflowBuilder');
+const CdWorkflowBuilder = require('./cd.workflowBuilder');
 const { BuildConfig } = require('../dockerize/dockerize.model');
 const { Ecr } = require('../infra/ecr/ecr.model');
 const { TerraformState } = require('../infra/terraform-state/terraformState.model');
+const { EksCluster } = require('../infra/EKS/eks.model');
 
-const FILE_PATH_IN_REPO = ".github/workflows/deploy.yml";
+const CI_FILE_PATH = ".github/workflows/ci.yml";
+const CD_FILE_PATH = ".github/workflows/cd.yml";
 const githubApiBaseUrl = "https://api.github.com/repos";
 
 
 async function getCIConfig(serviceId) {
-    const config = await CIConfig.findOne({ where: { service_id: serviceId } });
-    if (!config) throw new AppError('No CI configuration found for this service', 404);
-    return config;
+  const config = await CIConfig.findOne({ where: { service_id: serviceId } });
+  if (!config) throw new AppError('No CI configuration found for this service', 404);
+  return config;
 }
 
 function parseGithubUrl(repositoryUrl) {
@@ -48,9 +51,9 @@ async function getPATTokenFromDB(userId) {
   return decrypt(tokenRecord.token);
 }
 
-async function getFileSha(token, owner, repo, branch) {
+async function getFileSha(token, owner, repo, branch, filePath = CI_FILE_PATH) {
   const res = await fetch(
-    `${githubApiBaseUrl}/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}?ref=${branch}`,
+    `${githubApiBaseUrl}/${owner}/${repo}/contents/${filePath}?ref=${branch}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -68,6 +71,11 @@ async function getFileSha(token, owner, repo, branch) {
 
 function generateWorkflowYAML(config) {
   const builder = new WorkflowBuilder(config);
+  return builder.generateYAML();
+}
+
+function generateCdWorkflowYAML(config) {
+  const builder = new CdWorkflowBuilder(config);
   return builder.generateYAML();
 }
 
@@ -110,35 +118,43 @@ async function getEcrRepoNameFromDB(serviceId) {
   return ecrRepo ? ecrRepo.name : null;
 }
 
-async function pushWorkflowToGithub(userId, serviceId) {
-  // Get the language the user set in the Dockerize step
-  const language = await getLanguageFromBuildConfig(serviceId);
-  const config = await getCIConfig(serviceId);
-  console.log("=================================================");
-  console.log(config);
+/**
+ * Look up the EKS cluster name from the EksCluster table for this service.
+ * @param {string} serviceId
+ * @returns {Promise<string|null>}
+ */
+async function getEksClusterNameFromDB(serviceId) {
+  const cluster = await EksCluster.findOne({ where: { service_id: serviceId } });
+  return cluster ? cluster.cluster_name : null;
+}
 
-  // Enrich the config with language + Terraform ECR repo name before generating YAML
-  const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
-  const ecrRepoName = rawConfig.registry === 'aws-ecr' ? await getEcrRepoNameFromDB(serviceId) : null;
-  const enrichedConfig = { ...rawConfig, language, ecrRepoName };
+/**
+ * Look up the deployment type (eks vs vm) from terraform_states or resource tables.
+ * @param {string} serviceId
+ * @returns {Promise<string>} 'eks' or 'vm'
+ */
+async function getDeploymentTypeFromDB(serviceId) {
+  const state = await TerraformState.findOne({ where: { service_id: serviceId } });
+  if (state && state.deployment_type) {
+    return state.deployment_type;
+  }
+  const cluster = await EksCluster.findOne({ where: { service_id: serviceId } });
+  return cluster ? 'eks' : 'vm';
+}
 
-  const workflowYAML = generateWorkflowYAML(enrichedConfig);
-  const contentBase64 = Buffer.from(workflowYAML).toString('base64');
-
-  const service = await getServiceById(serviceId, userId);
-  const { owner, repo } = parseGithubUrl(service.repository_url);
-  const token = await getPATTokenFromDB(userId);
-  const sha = await getFileSha(token, owner, repo, service.branch);
+async function pushSingleFileToGithub({ token, owner, repo, branch, filePath, yamlContent }) {
+  const contentBase64 = Buffer.from(yamlContent).toString('base64');
+  const sha = await getFileSha(token, owner, repo, branch, filePath);
 
   const body = {
-    message: `Create or update ${FILE_PATH_IN_REPO}`,
+    message: `Create or update ${filePath}`,
     content: contentBase64,
-    branch: service.branch,
+    branch,
     ...(sha && { sha }),
   };
 
   const res = await fetch(
-    `${githubApiBaseUrl}/${owner}/${repo}/contents/${FILE_PATH_IN_REPO}`,
+    `${githubApiBaseUrl}/${owner}/${repo}/contents/${filePath}`,
     {
       method: "PUT",
       headers: {
@@ -152,10 +168,53 @@ async function pushWorkflowToGithub(userId, serviceId) {
 
   const result = await res.json();
   if (!res.ok) {
-    throw new AppError(`Push failed: ${res.status} - ${JSON.stringify(result)}`, res.status);
+    throw new AppError(`Push failed for ${filePath}: ${res.status} - ${JSON.stringify(result)}`, res.status);
+  }
+  return result;
+}
+
+async function pushWorkflowToGithub(userId, serviceId) {
+  // Get the language the user set in the Dockerize step
+  const language = await getLanguageFromBuildConfig(serviceId);
+  const config = await getCIConfig(serviceId);
+
+  // Enrich the config with language + Terraform ECR repo name + EKS cluster name + deploymentType
+  const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
+  const ecrRepoName = rawConfig.registry === 'aws-ecr' ? await getEcrRepoNameFromDB(serviceId) : null;
+  const eksClusterName = await getEksClusterNameFromDB(serviceId);
+  const deploymentType = await getDeploymentTypeFromDB(serviceId);
+  const enrichedConfig = { ...rawConfig, language, ecrRepoName, eksClusterName, deploymentType };
+
+  const service = await getServiceById(serviceId, userId);
+  const { owner, repo } = parseGithubUrl(service.repository_url);
+  const token = await getPATTokenFromDB(userId);
+
+  // 1. Push CI Workflow (.github/workflows/ci.yml)
+  const ciYaml = generateWorkflowYAML(enrichedConfig);
+  const ciResult = await pushSingleFileToGithub({
+    token,
+    owner,
+    repo,
+    branch: service.branch,
+    filePath: CI_FILE_PATH,
+    yamlContent: ciYaml,
+  });
+
+  let cdResult = null;
+  // 2. If CD is enabled, push CD Workflow (.github/workflows/cd.yml)
+  if (enrichedConfig.enable_cd || enrichedConfig.enableCD) {
+    const cdYaml = generateCdWorkflowYAML(enrichedConfig);
+    cdResult = await pushSingleFileToGithub({
+      token,
+      owner,
+      repo,
+      branch: service.branch,
+      filePath: CD_FILE_PATH,
+      yamlContent: cdYaml,
+    });
   }
 
-  return result;
+  return { ciResult, cdResult };
 }
 
 async function getExistingWorkflow(userId, serviceId) {
@@ -190,8 +249,13 @@ module.exports = {
   pushWorkflowToGithub,
   getExistingWorkflow,
   getServiceById,
-  getPATTokenFromDB,
+  generateWorkflowYAML,
+  generateCdWorkflowYAML,
   parseGithubUrl,
   getLanguageFromBuildConfig,
   getEcrRepoNameFromDB,
+  getEksClusterNameFromDB,
+  getDeploymentTypeFromDB,
+  CI_FILE_PATH,
+  CD_FILE_PATH,
 };

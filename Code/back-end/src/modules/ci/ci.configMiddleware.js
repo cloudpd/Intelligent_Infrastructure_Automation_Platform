@@ -18,6 +18,7 @@ function validateCIConfigMiddleware(req, res, next) {
     const enableLint = body.enableLint !== undefined ? body.enableLint : body.enablelint;
     const enableTests = body.enableTests !== undefined ? body.enableTests : body.enabletests;
     const enableBuild = body.enableBuild !== undefined ? body.enableBuild : body.enablebuild;
+    const enableCD = body.enableCD !== undefined ? body.enableCD : body.enablecd;
 
     const serviceId = req.params.serviceId || body.serviceId;
 
