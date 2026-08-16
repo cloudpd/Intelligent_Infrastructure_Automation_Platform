@@ -1,0 +1,53 @@
+
+# # this override default values in postgresql chart
+# # but this not related to bitname/postgres chart default values 
+# # because  postgresql is dependency chart so when do enabled: false it will not install the subchart 
+# mysql: # this attribute are waiting for postgresql chart need him to start your bitname/postgres chart 
+#   enabled: false # disable postgresql chart on production environment will use RDS 
+
+# ################## end of postgresql ################
+
+# global:
+
+#   db_host: "terraform-20260728001057683400000004.c52e88koezpq.eu-north-1.rds.amazonaws.com"
+
+#   backend_host: "back-svc" # set in svc of backend chart and use it in frontend chart
+
+#   ################### end of backend ################
+
+
+#   frontend_host: "front-svc"
+
+
+
+
+
+mysql:
+  enabled: false
+back-chart:
+  image:
+    repository: "youssef11gaber10/gp-back"
+    tag: "test-1b522481"
+front-chart:
+  image:
+    repository: "youssef11gaber10/gp-front"
+    tag: "test-eb8b76ec"
+global:
+  db_host: "terraform-2026073004331701100000000a.c52e88koezpq.eu-north-1.rds.amazonaws.com"
+  backend_host: "back-svc"
+  frontend_host: "front-svc"
+  hostname: "devops-app.mycloudlab.website"
+  back_canary_enabled: true
+  back_canary_weight:
+    stable: 90
+    canary: 10
+  back_canary_image:
+    repository: "youssef11gaber10/gp-back"
+    tag: "test-1b522481"
+  front_canary_enabled: true
+  front_canary_weight:
+    stable: 10
+    canary: 90
+  front_canary_image:
+    repository: "youssef11gaber10/gp-front"
+    tag: "test-e3d55b4d"

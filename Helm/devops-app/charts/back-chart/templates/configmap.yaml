@@ -1,0 +1,16 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: back-cm
+  labels:
+{{ include "back-chart.labels" . | nindent 4 }}
+data:
+    PORT: "5000"
+    DB_HOST: {{ .Values.global.db_host }}
+    DB_PORT: "3306"
+    DB_NAME: "infra_platform"
+    DB_USER: "infra_app"
+    JWT_ACCESS_EXPIRES_IN: 15m
+    # DB_PASSWORD: "Saw42163#"
+    # JWT_ACCESS_SECRET: some_long_random_string
+    # ENCRYPTION_KEY: 83869ffbc003c7862533706693eaf467229fd2f1eb24bb6eb3b557f210934ce5

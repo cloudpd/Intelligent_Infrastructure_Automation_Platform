@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata: 
+  name: root-app
+  namespace: argocd  
+spec: 
+  project: default 
+
+  source: 
+    repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+    path: ./Argo-CD
+
+    targetRevision: main  
+
+  destination: 
+    # server: https://kubernetes.default.svc
+    name: in-cluster
+    namespace: argocd
+
+
+  syncPolicy: 
+    # manual:  # (manual approval) CD contionus Delivery
+    automated: # CD continous deployment (no manual appro)
+      selfHeal: true  
+      prune: true 
+    syncOptions:
+      - CreateNamespace=false 
+
+      

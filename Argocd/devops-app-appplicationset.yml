@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: devops-app-applicationset
+  namespace: argocd
+spec:
+
+  goTemplate: true
+
+  generators:
+    - list:
+        elements:
+          - name: prod-devops-app
+            values_file: prod-values.yml
+            cluster_name: eks-prod
+            namespace: 'devops-app'
+            branch: main
+            autosync: true
+
+          # - name: staging-devops-app
+          #   values_file: test-values.yml
+          #   cluster_name: eks-prod
+          #   namespace: 'staging-devops-app'
+          #   branch: test
+          #   autosync: true
+
+          # - name: dev-devops-app
+          #   values_file: dev-values.yml
+          #   cluster_name: kops-dev
+          #   namespace: 'devops-app'
+          #   autosync: true
+
+  template:
+    metadata:
+      name: '{{.name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+        path: 'Helm/app-charts/devops-app'
+        targetRevision: '{{.branch}}'
+
+        helm:
+          releaseName: devops-app-release
+          valueFiles:
+            - '{{.values_file}}'
+      destination:
+        name: '{{.cluster_name}}'
+        namespace: '{{.namespace}}'
+
+  templatePatch: |
+    spec:
+      {{- if .autosync }}
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=false
+      {{- end }}

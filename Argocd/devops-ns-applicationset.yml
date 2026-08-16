@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: devops-ns-applications
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          # - name: dev-cluster-ns
+          #   cluster_name: kops-dev
+          - name: prod-cluster-ns
+            cluster_name: eks-prod
+
+
+  template:
+    metadata:
+      name: '{{name}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: "-3"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+        path: ./K8S/devops-app
+        targetRevision: main
+      destination:
+        name: '{{cluster_name}}'
+        namespace: 'devops-app'
+      syncPolicy:
+        automated: 
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=false
+          

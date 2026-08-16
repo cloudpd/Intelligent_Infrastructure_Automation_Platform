@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: devops-app-quota
+  namespace: devops-app
+spec:
+  hard:
+    # CPU
+    requests.cpu: "3"        # 2000m total requests across all pods
+    limits.cpu: "5"          # 4000m total limits across all pods
+
+    # Memory
+    requests.memory: 3Gi
+    limits.memory: 5Gi
+
+    # Storage
+    requests.storage: 30Gi
+
+    # Objects
+    pods: "25"
+    services: "15"
+    configmaps: "50"
+    secrets: "50"
+
+    # Persistent Volumes
+    persistentvolumeclaims: "5"

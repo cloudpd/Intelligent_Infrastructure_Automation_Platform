@@ -1,0 +1,33 @@
+
+# this override default values in postgresql chart
+mysql: # this attribute are waiting for postgresql chart need him to start your bitname/postgres chart 
+  enabled: true # enable the subchart in dev environment, false to disable it in prod and rely on rds
+  auth:
+    username: "infra_app"
+    database: "infra_platform"
+    # rootPassword: "changeme-root"
+    # password: "changeme-app"
+    existingSecret: "mysql-secret" # get password & postgres-password from secret created by external secret
+  primary:
+    persistence:
+      enabled: true
+      storageClass: gp2
+      size: 8Gi
+################ end of mysql ################
+
+back-chart:
+  image:
+    repository: "youssef11gaber10/gp-back"
+    tag: "dev-8bd08f5e"
+front-chart:
+  image:
+    repository: "youssef11gaber10/gp-front"
+    tag: "dev-8bd08f5e"
+global:
+  db_host: "mysql-svc" # here i set this in mysql chart and also read in backend 
+  # db_port: "3306" # not changed so no need to override here 
+
+  backend_host: "back-svc" # set in svc of backend chart and use it in frontend chart
+  ################### end of backend ################
+  frontend_host: "front-svc"
+  hostname: "dev-devops-app.mycloudlab.website"

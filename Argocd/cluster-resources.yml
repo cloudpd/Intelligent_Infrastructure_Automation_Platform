@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata: 
+  name: cluster-resources
+  namespace: argocd  
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec: 
+  project: default 
+
+  source: 
+    repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+    path: ./K8S/cluster-resources
+
+    targetRevision: main  
+
+  destination: # eks cluster
+    name: eks-prod
+
+
+
+  syncPolicy: 
+    # manual:  # (manual approval) CD contionus Delivery
+    automated: # CD continous deployment (no manual appro)
+      selfHeal: true  
+      prune: true 
+
+
+      

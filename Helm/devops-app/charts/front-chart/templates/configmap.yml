@@ -1,0 +1,13 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: front-cm
+  labels:
+{{ include "back-chart.labels" . | nindent 4 }}
+data:
+    # REACT_APP_API_HOST: {{ .Values.global.backend_host }}
+    REACT_APP_API_HOST: "/api" # come from frontend code with origin/api goes to backend-svc:5000/ not backend-svc cause this in browser not have idea about backend-svc
+    REACT_APP_API_PORT: "5000"
+
+
+
