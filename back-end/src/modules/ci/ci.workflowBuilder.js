@@ -35,6 +35,8 @@ class WorkflowBuilder {
       enableTrivy: rawConfig.enable_trivy !== undefined ? rawConfig.enable_trivy : rawConfig.enableTrivy,
       // Language from the BuildConfig table set during the Dockerize step
       language: rawConfig.language || null,
+      // ECR repo name from the Terraform-created ECR record (aws-ecr registry only)
+      ecrRepoName: rawConfig.ecrRepoName || null,
       enableLint,
       enableTests,
       enableBuild,
@@ -130,6 +132,8 @@ class WorkflowBuilder {
     const registryConfig = {
       dockerHubUsername: this.config.dockerHubUsername,
       awsEcrRegion: this.config.awsEcrRegion,
+      // The actual ECR repo name from the Terraform-created ECR record
+      ecrRepoName: this.config.ecrRepoName,
     };
 
     const registryLoginGen = new RegistryLoginGenerator(

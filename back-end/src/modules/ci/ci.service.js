@@ -9,6 +9,8 @@ const { CIConfig } = require('./ci.model');
 const { decrypt } = require('../../core/utils/encryption');
 const WorkflowBuilder = require('./ci.workflowBuilder');
 const { BuildConfig } = require('../dockerize/dockerize.model');
+const { Ecr } = require('../infra/ecr/ecr.model');
+const { TerraformState } = require('../infra/terraform-state/terraformState.model');
 
 const FILE_PATH_IN_REPO = ".github/workflows/deploy.yml";
 const githubApiBaseUrl = "https://api.github.com/repos";
@@ -80,6 +82,34 @@ async function getLanguageFromBuildConfig(serviceId) {
   return buildConfig ? buildConfig.language : null;
 }
 
+/**
+ * Look up the ECR URL for the CI workflow generator.
+ *
+ * Priority order:
+ *  1. terraform_states.ecr_url  — the REAL full URL Terraform outputs after
+ *     apply, e.g. "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo".
+ *     This is only set once `terraform apply` has completed successfully.
+ *  2. ecr_repositories.name     — the repo name the user configured before
+ *     apply (e.g. "my-repo"). Used as a fallback so the YAML is still
+ *     partially useful even before Terraform has run.
+ *  3. null                      — no ECR config found at all; generators
+ *     will fall back to ${{ secrets.ECR_REPOSITORY }}.
+ *
+ * @param {string} serviceId
+ * @returns {Promise<string|null>}
+ */
+async function getEcrRepoNameFromDB(serviceId) {
+  // 1. Try the real post-apply URL from terraform_states
+  const state = await TerraformState.findOne({ where: { service_id: serviceId } });
+  if (state && state.ecr_url) {
+    return state.ecr_url; // full URL: "<account>.dkr.ecr.<region>.amazonaws.com/<name>"
+  }
+
+  // 2. Fall back to the repo name configured before Terraform apply
+  const ecrRepo = await Ecr.findOne({ where: { service_id: serviceId } });
+  return ecrRepo ? ecrRepo.name : null;
+}
+
 async function pushWorkflowToGithub(userId, serviceId) {
   // Get the language the user set in the Dockerize step
   const language = await getLanguageFromBuildConfig(serviceId);
@@ -87,9 +117,10 @@ async function pushWorkflowToGithub(userId, serviceId) {
   console.log("=================================================");
   console.log(config);
 
-  // Enrich the config with language before generating YAML
+  // Enrich the config with language + Terraform ECR repo name before generating YAML
   const rawConfig = typeof config.toJSON === 'function' ? config.toJSON() : config;
-  const enrichedConfig = { ...rawConfig, language };
+  const ecrRepoName = rawConfig.registry === 'aws-ecr' ? await getEcrRepoNameFromDB(serviceId) : null;
+  const enrichedConfig = { ...rawConfig, language, ecrRepoName };
 
   const workflowYAML = generateWorkflowYAML(enrichedConfig);
   const contentBase64 = Buffer.from(workflowYAML).toString('base64');
@@ -162,4 +193,5 @@ module.exports = {
   getPATTokenFromDB,
   parseGithubUrl,
   getLanguageFromBuildConfig,
+  getEcrRepoNameFromDB,
 };

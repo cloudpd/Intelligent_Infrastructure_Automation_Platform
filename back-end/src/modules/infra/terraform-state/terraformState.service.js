@@ -309,9 +309,33 @@ async function generate(userId, { serviceId, serviceSlug, environment = 'dev' })
   };
 }
 
+/**
+ * Called after a successful `terraform apply` to save the real ECR
+ * repository URL (which includes the AWS account ID, e.g.
+ * "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo") back into the
+ * terraform_states row for this service.
+ *
+ * This is the only place the full URL is known — it comes from
+ * `terraform output -json` → `ecr_repository_url.value` — so it must be
+ * persisted here so the CI generator can use it later without re-running
+ * Terraform or calling AWS directly.
+ */
+async function saveEcrUrlFromOutputs(serviceId, outputs) {
+  const ecrUrl = outputs?.ecr_repository_url?.value;
+  if (!ecrUrl) return; // ECR was not part of this apply (e.g. no use_ecr)
+
+  const state = await TerraformState.findOne({ where: { service_id: serviceId } });
+  if (!state) return;
+
+  state.ecr_url = ecrUrl;
+  state.applied = true;
+  await state.save();
+}
+
 module.exports = {
   saveSetup,
   saveDeployment,
   getState,
   generate,
+  saveEcrUrlFromOutputs,
 };
