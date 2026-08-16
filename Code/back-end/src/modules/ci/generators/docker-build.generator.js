@@ -19,11 +19,20 @@ class DockerBuildGenerator {
   generateAWSECRBuild() {
     const sha = '${{ github.sha }}';
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
-    const imageTag = `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}:${sha}`;
+    const ecrRepoName = this.registryConfig.ecrRepoName;
+
+    // If ecrRepoName is the full URL from Terraform output (contains amazonaws.com),
+    // use it directly. Otherwise prepend the ECR registry from the login step.
+    const isFullUrl = ecrRepoName && ecrRepoName.includes('amazonaws.com');
+    const imageBase = isFullUrl
+      ? ecrRepoName                        // "123456789.dkr.ecr.us-east-1.amazonaws.com/my-repo"
+      : ecrRepoName
+        ? `${ecrRegistry}/${ecrRepoName}`  // pre-apply fallback: just the repo name
+        : `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}`;  // no ECR config at all
 
     return {
       name: 'Build Docker Image',
-      run: `docker build -t ${imageTag} -t ${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}:latest .`,
+      run: `docker build -t ${imageBase}:${sha} -t ${imageBase}:latest .`,
     };
   }
 

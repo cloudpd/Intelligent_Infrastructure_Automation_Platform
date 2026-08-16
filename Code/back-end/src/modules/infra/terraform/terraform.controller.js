@@ -8,6 +8,7 @@ const eksService = require('../EKS/eks.service');
 const vmService = require('../vm/vm.service');
 const awsService = require('../../aws/aws.service');
 const terraformStateService = require('../terraform-state/terraformState.service');
+const { saveEcrUrlFromOutputs } = require('../terraform-state/terraformState.service');
 
 /**
  * The Terraform Setup Wizard (`/terraform/setup`) saves the S3 backend
@@ -353,7 +354,9 @@ async function applyVmFiles(req, res, next) {
         awsSecretAccessKey: prepared.creds.secret_key,
         awsRegion: prepared.resource.region,
       })
-      .then((outputs) => {
+      .then(async (outputs) => {
+        // Persist the real ECR URL (includes AWS account ID) from Terraform outputs
+        await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
         return vmService.markApplied(vmId, {
           instanceId: outputs.vm_instance_id?.value,
           publicIp: outputs.vm_public_ip?.value,
@@ -410,7 +413,9 @@ async function applyEksFiles(req, res, next) {
         awsSecretAccessKey: prepared.creds.secret_key,
         awsRegion: prepared.resource.region,
       })
-      .then((outputs) => {
+      .then(async (outputs) => {
+        // Persist the real ECR URL (includes AWS account ID) from Terraform outputs
+        await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
         return require('../EKS/eks.service').markApplied(clusterId, {
           clusterEndpoint: outputs.cluster_endpoint?.value,
           clusterName: outputs.cluster_name?.value,

@@ -3,6 +3,7 @@ const githubService = require('../github/github.service');
 const { validateRepository } = require('./ci.validation');
 const { CIConfig } = require('./ci.model');
 const AppError = require('../../core/utils/AppError');
+const { getEcrRepoNameFromDB } = require('./ci.service');
 
 async function getCIConfigController(req, res, next) {
     try {
@@ -112,6 +113,11 @@ async function previewWorkflowController(req, res, next) {
 
         const language = await ciService.getLanguageFromBuildConfig(serviceId);
 
+        // Look up the Terraform-created ECR repo name (if registry is aws-ecr)
+        const ecrRepoName = ciConfig.registry === 'aws-ecr'
+            ? await getEcrRepoNameFromDB(serviceId)
+            : null;
+
         // Build config object for generator
         const config = {
             serviceId,
@@ -124,6 +130,7 @@ async function previewWorkflowController(req, res, next) {
             enableTests: ciConfig.enable_tests,
             enableBuild: ciConfig.enable_build,
             language,
+            ecrRepoName,
         };
 
 

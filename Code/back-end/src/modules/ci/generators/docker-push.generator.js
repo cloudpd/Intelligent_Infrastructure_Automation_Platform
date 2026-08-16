@@ -17,10 +17,19 @@ class DockerPushGenerator {
   generateAWSECRPush() {
     const sha = '${{ github.sha }}';
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
-    const ecrRepo = '${{ secrets.ECR_REPOSITORY }}';
+    const ecrRepoName = this.registryConfig.ecrRepoName;
+
+    // If ecrRepoName is the full URL from Terraform output, use it directly
+    const isFullUrl = ecrRepoName && ecrRepoName.includes('amazonaws.com');
+    const imageBase = isFullUrl
+      ? ecrRepoName
+      : ecrRepoName
+        ? `${ecrRegistry}/${ecrRepoName}`
+        : `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}}`;
+
     return {
       name: 'Push to AWS ECR',
-      run: `docker push ${ecrRegistry}/${ecrRepo}:${sha} && docker push ${ecrRegistry}/${ecrRepo}:latest`,
+      run: `docker push ${imageBase}:${sha} && docker push ${imageBase}:latest`,
     };
   }
 

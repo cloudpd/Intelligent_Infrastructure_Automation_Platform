@@ -24,13 +24,21 @@ class TrivyGenerator {
   generateForAWSECR() {
     const sha = '${{ github.sha }}';
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
-    const imageTag = `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}:${sha}`;
+    const ecrRepoName = this.registryConfig.ecrRepoName;
+
+    // If ecrRepoName is the full URL from Terraform output, use it directly
+    const isFullUrl = ecrRepoName && ecrRepoName.includes('amazonaws.com');
+    const imageBase = isFullUrl
+      ? ecrRepoName
+      : ecrRepoName
+        ? `${ecrRegistry}/${ecrRepoName}`
+        : `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}`;
 
     return {
       name: 'Scan Image with Trivy',
       uses: 'aquasecurity/trivy-action@master',
       with: {
-        'image-ref': imageTag,
+        'image-ref': `${imageBase}:${sha}`,
         format: 'sarif',
         output: 'trivy-results.sarif',
         severity: 'CRITICAL,HIGH',
