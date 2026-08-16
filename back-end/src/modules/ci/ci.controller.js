@@ -1,8 +1,8 @@
 const ciService = require('./ci.service');
+const githubService = require('../github/github.service');
 const { validateRepository } = require('./ci.validation');
 const { CIConfig } = require('./ci.model');
 const AppError = require('../../core/utils/AppError');
-const ciSecretsService = require('./ci.add-secrets');
 
 async function getCIConfigController(req, res, next) {
     try {
@@ -198,14 +198,13 @@ async function pushWorkflowToGithub(req, res, next) {
 async function pushSecrets(req, res, next) {
     try {
         const { serviceId } = req.params;
-        const { registry, secrets } = req.body;
+        const { secrets } = req.body || {};
 
-        const result = await ciSecretsService.pushRegistrySecrets(
-            req.user.id,
+        const result = await githubService.pushRepoSecrets({
+            userId: req.user.id,
             serviceId,
-            registry,
-            secrets
-        );
+            secrets,
+        });
 
         res.status(200).json({ success: true, result });
     } catch (err) {

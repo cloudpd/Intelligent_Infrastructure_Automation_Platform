@@ -29,4 +29,26 @@ async function deleteTokenController(req, res, next) {
   }
 }
 
-module.exports = { addTokenController, listTokensController, deleteTokenController };
+async function pushRepoSecretsController(req, res, next) {
+  try {
+    const { serviceId } = req.params;
+    const { secrets } = req.body || {};
+
+    const result = await githubService.pushRepoSecrets({
+      userId: req.user.id,
+      serviceId,
+      secrets,
+    });
+
+    res.status(200).json({ success: true, result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  addTokenController,
+  listTokensController,
+  deleteTokenController,
+  pushRepoSecretsController,
+};

@@ -11,7 +11,9 @@ export default function TerraformSetupWizard() {
 
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
+  const [githubSecretStatus, setGithubSecretStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [pushingGithubSecrets, setPushingGithubSecrets] = useState(false);
 
   // Step 1 — AWS Credentials
   const [credentials, setCredentials] = useState([]);
@@ -191,8 +193,71 @@ export default function TerraformSetupWizard() {
     }
   }
 
+  async function handlePushCredentialsToGithub() {
+    setError('');
+    setGithubSecretStatus('');
+
+    let credentialPayload = null;
+
+    try {
+      if (addingNew || credentials.length === 0) {
+        if (!accessKey.trim() || !secretKey.trim()) {
+          throw new Error('Please enter your AWS access key and secret key before pushing credentials to GitHub secrets.');
+        }
+
+        if(!accessKey.trim().length > 0 || !secretKey.trim().length > 0) {
+          throw new Error('Please enter your AWS access key and secret key before pushing credentials to GitHub secrets.');
+        }
+
+        credentialPayload = {
+          AWS_ACCESS_KEY_ID: accessKey.trim(),
+          AWS_SECRET_ACCESS_KEY: secretKey.trim(),
+          // AWS_REGION: networkForm.region.trim() || 'us-east-1',
+        };
+      } else {
+        if (!selectedCredentialId) {
+          throw new Error('Please select an AWS credential before pushing it to GitHub secrets.');
+        }
+
+        const res = await fetch(`${API_URL}/aws/${selectedCredentialId}/decrypted`, { headers: authHeaders });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(data?.message || `Request failed with status ${res.status}`);
+        }
+
+        credentialPayload = {
+          AWS_ACCESS_KEY_ID: data?.data?.access_key,
+          AWS_SECRET_ACCESS_KEY: data?.data?.secret_key,
+          // AWS_REGION: networkForm.region.trim() || 'us-east-1',
+        };
+      }
+
+      if (!credentialPayload.AWS_ACCESS_KEY_ID || !credentialPayload.AWS_SECRET_ACCESS_KEY) {
+        throw new Error('The selected AWS credential is missing keys and cannot be pushed.');
+      }
+
+      setPushingGithubSecrets(true);
+      const res = await fetch(`${API_URL}/github/${serviceId}/secrets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ secrets: credentialPayload }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || `Request failed with status ${res.status}`);
+      }
+      setGithubSecretStatus('AWS credentials were pushed to GitHub secrets.');
+    } catch (err) {
+      setError(err.message || 'Could not push AWS credentials to GitHub secrets.');
+    } finally {
+      setPushingGithubSecrets(false);
+    }
+  }
+
   async function handleFinish() {
     setError('');
+    setGithubSecretStatus('');
     setSubmitting(true);
     setSavingNetwork(true);
 
@@ -337,7 +402,21 @@ export default function TerraformSetupWizard() {
             )}
 
             {error && <p className='terraform-error'>{error}</p>}
+            {githubSecretStatus && <p className='projects-subtitle' style={{ color: '#0f9d58' }}>{githubSecretStatus}</p>}
             <div className='terraform-actions'>
+              <button
+                type='button'
+                className='project-button project-button--ghost'
+                onClick={handlePushCredentialsToGithub}
+                disabled={
+                  loadingCredentials ||
+                  savingCredential ||
+                  pushingGithubSecrets ||
+                  (!(selectedCredentialId && !addingNew) && !(accessKey.trim() && secretKey.trim()))
+                }
+              >
+                {pushingGithubSecrets ? 'Pushing...' : 'Push credentials to GitHub secrets'}
+              </button>
               <button
                 type='button'
                 className='project-button project-button--primary'

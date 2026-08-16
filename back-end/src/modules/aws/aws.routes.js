@@ -3,6 +3,7 @@ const {
   createCredential,
   getUserCredentials,
   getCredentialById,
+  getDecryptedCredential,
   updateCredential,
   deleteCredential,
 } = require('./aws.controller');
@@ -19,6 +20,8 @@ router
   .route('/')
   .post(validate(createCredentialSchema), createCredential)
   .get(getUserCredentials);
+
+router.get('/:id/decrypted', getDecryptedCredential);
 
 router
   .route('/:id')

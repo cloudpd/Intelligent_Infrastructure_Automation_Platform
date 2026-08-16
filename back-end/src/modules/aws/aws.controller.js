@@ -38,6 +38,18 @@ const getCredentialById = async (req, res, next) => {
   }
 };
 
+const getDecryptedCredential = async (req, res, next) => {
+  try {
+    const credential = await awsService.getDecryptedCredential(req.user.id, req.params.id);
+    return res.status(200).json({
+      status: 'success',
+      data: credential,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 const updateCredential = async (req, res, next) => {
   try {
     const credential = await awsService.updateCredential(req.user.id, req.params.id, req.body);
@@ -66,6 +78,7 @@ module.exports = {
   createCredential,
   getUserCredentials,
   getCredentialById,
+  getDecryptedCredential,
   updateCredential,
   deleteCredential,
 };
