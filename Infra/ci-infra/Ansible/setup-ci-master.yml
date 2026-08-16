@@ -1,0 +1,58 @@
+
+- name: setup ci master as jenkins server
+  hosts: master
+  become: true
+  tasks:
+
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Import Corretto GPG key
+      rpm_key:
+        key: https://yum.corretto.aws/corretto.key
+        state: present
+
+    - name: Add Corretto yum repo
+      get_url:
+        url: https://yum.corretto.aws/corretto.repo
+        dest: /etc/yum.repos.d/corretto.repo
+
+    - name: Install Java 21 (Amazon Corretto), git, amazon-efs-utils
+      yum:
+        name:
+          - java-21-amazon-corretto
+          - git
+          - amazon-efs-utils
+        state: present
+
+    - name: Add Jenkins repo
+      get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+
+    - name: Import Jenkins GPG key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+        state: present
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Enable and start Jenkins (on local disk for now - EFS mounted in a later play)
+      systemd:
+        name: jenkins
+        enabled: true
+        state: started
+
+    - name: Wait for Jenkins HTTP endpoint
+      uri:
+        url: http://localhost:8080/login
+        status_code: 200
+      register: jenkins_status
+      retries: 30
+      delay: 5
+      until: jenkins_status.status == 200

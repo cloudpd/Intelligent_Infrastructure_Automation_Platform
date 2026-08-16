@@ -1,0 +1,2 @@
+Infra/ci-infra/use_module/.terraform/*
+# Infra/app-infra/EKS-cluster/.terraform/*
