@@ -11,6 +11,7 @@ require('./modules/infra/vm/vm.model');
 require('./modules/infra/terraform-state/terraformState.model');
 
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || 'localhost'; //in dev work in localhost on prod work on 0.0.0.0
 
 async function start() {
   try {
@@ -23,7 +24,7 @@ async function start() {
     console.log('✅ Database models synced successfully');
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on http://${HOST}:${PORT}`);
     });
   } catch (err) {
     console.error('❌ Failed to start:', err);
