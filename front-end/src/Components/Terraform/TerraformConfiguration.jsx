@@ -128,10 +128,10 @@ export default function TerraformConfiguration() {
       const createData = await createRes.json().catch(() => null);
       if (!createRes.ok) throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
 
-      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
+      const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceSlug: 'service', environment: 'dev' }),
+        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -166,10 +166,10 @@ export default function TerraformConfiguration() {
       const createData = await createRes.json().catch(() => null);
       if (!createRes.ok) throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
 
-      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
+      const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceId }),
+        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -228,17 +228,56 @@ export default function TerraformConfiguration() {
           if (!isHarmless) {
             throw new Error(createData?.message || 'Could not create EKS cluster.');
           }
-          // else: harmless "this exact cluster already exists" — fall through and continue
+
+          // A cluster already exists for this service — POST always 409s
+          // once one exists, so it can never apply form edits on its own.
+          // Look up the existing cluster and PATCH it with whatever's
+          // actually updatable (see eks.validation.js#updateEksClusterSchema).
+          const listRes = await fetch(`${API_URL}/infra/eks/${serviceId}/clusters`, { headers: authHeaders });
+          const listData = await listRes.json().catch(() => null);
+          const existingCluster = Array.isArray(listData?.data) ? listData.data[0] : null;
+          if (!listRes.ok || !existingCluster?.id) {
+            throw new Error(listData?.message || 'Could not find the existing EKS cluster to update.');
+          }
+
+          const updateRes = await fetch(`${API_URL}/infra/eks/clusters/${existingCluster.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+              clusterVersion: eksForm.clusterVersion,
+              nodeGroups: eksForm.nodeGroups,
+              clusterAdmins: eksForm.clusterAdmins.map((admin) => ({
+                userName: admin.userName,
+                userAccountId: admin.userAccountId,
+              })),
+              grafanaAdminPassword: eksForm.grafanaAdminPassword,
+              enableEbsCsi: eksForm.enableEbsCsi,
+              enableAlbController: eksForm.enableAlbController,
+              enableExternalDns: eksForm.enableExternalDns,
+              enableExternalSecrets: eksForm.enableExternalSecrets,
+            }),
+          });
+          const updateData = await updateRes.json().catch(() => null);
+          if (!updateRes.ok) throw new Error(updateData?.message || 'Could not update EKS cluster.');
+
+          // clusterName/region can never be changed via PATCH (see
+          // updateEksClusterSchema) — surface that clearly instead of
+          // silently ignoring the edit like before.
+          if (eksForm.region !== existingCluster.region || eksForm.clusterName !== existingCluster.cluster_name) {
+            setActionError(
+              "Cluster name and region can't be changed after creation — delete this cluster and create a new one to change those. Other changes were saved."
+            );
+          }
         } else if (createRes.status !== 200 && createRes.status !== 201) {
           const createData = await createRes.json().catch(() => null);
           throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
         }
       }
 
-      const res = await fetch(`${API_URL}/infra/terraform/services/${serviceId}/generate`, {
+      const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceSlug: 'service', environment: 'dev' }),
+        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -255,6 +294,38 @@ export default function TerraformConfiguration() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  // `applying` on the server can take anywhere from ~30s (VM) to 30-40+
+  // minutes (EKS: cluster creation, then node group provisioning, then
+  // 4 sequential `wait = true` Helm releases). This polls the VM/cluster's
+  // own record — not the terraform_states row — because that's where
+  // markApplying/markApplied/markFailed actually write the real outcome.
+  // Stops polling once status is anything other than "applying", or after
+  // ~50 minutes. A timeout here does NOT mean the apply failed — the
+  // background job on the server keeps running and will still call
+  // markApplied/markFailed whether or not anyone's still polling — so this
+  // resolves with a `timedOut: true` marker instead of throwing, letting
+  // the caller show "still running, check back" rather than a false error.
+  async function pollUntilSettled({ deploymentType, resourceId, authHeaders, intervalMs = 5000, maxAttempts = 600 }) {
+    const url = deploymentType === 'eks'
+      ? `${API_URL}/infra/eks/clusters/${resourceId}`
+      : `${API_URL}/infra/vm/vms/${resourceId}`;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const res = await fetch(url, { headers: authHeaders });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
+
+      const resource = data.data || data;
+      if (resource.status && resource.status !== 'applying') {
+        return resource;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+    }
+
+    return { status: 'applying', timedOut: true };
   }
 
   async function handleApply() {
@@ -344,9 +415,38 @@ export default function TerraformConfiguration() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
 
+      // The apply endpoint responds as soon as the background job *starts*
+      // (status 202, "Terraform apply started") — it does NOT mean Terraform
+      // has actually finished. The real result only shows up later on the
+      // VM/EKS record's own `status` field (set by markApplied/markFailed
+      // once `terraform apply` truly completes on the server). So instead of
+      // treating this response as success, poll that record until it settles.
+      setApplyPhase('applying');
+      setApplyProgress(85);
+
+      const finalResource = await pollUntilSettled({
+        deploymentType,
+        resourceId: target.id,
+        authHeaders,
+      });
+
+      if (finalResource.timedOut) {
+        // Not a failure — the server-side apply is still running. Leave the
+        // progress bar visibly "applying" rather than erroring out, and let
+        // the person know it's safe to check back later or reload.
+        setActionSuccess(
+          "Terraform apply is still running on the server (EKS + Helm add-ons can take a while). It hasn't failed — reload this page in a few minutes to see the final status."
+        );
+        return;
+      }
+
+      if (finalResource.status === 'failed') {
+        throw new Error(finalResource.apply_error || finalResource.applyError || 'Terraform apply failed on the server.');
+      }
+
       setApplyPhase('completed');
       setApplyProgress(100);
-      setActionSuccess(data.message || 'Terraform apply completed successfully. Your infrastructure is now running.');
+      setActionSuccess('Terraform apply completed successfully. Your infrastructure is now running.');
       fetchState();
     } catch (err) {
       setApplyPhase('error');

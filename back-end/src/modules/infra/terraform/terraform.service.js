@@ -10,6 +10,30 @@ const { run } = require('./utils/execTerraform');
 const TEMPLATE_DIR = path.join(__dirname, 'template');
 
 /**
+ * Resolves how many AZs the network module should span.
+ *
+ * - Defaults to 2 (safe default for HA, and the minimum EKS requires).
+ * - Respects an explicit networkConfig.azCount if the user set one.
+ * - Hard-fails if EKS is present and the user explicitly asked for < 2,
+ *   since AWS will reject cluster creation otherwise (see
+ *   InvalidParameterException: "Subnets specified must be in at least
+ *   two different AZs").
+ */
+function resolveAzCount(networkConfig, eksConfig) {
+  const azCount = networkConfig.azCount ?? 2;
+
+  if (eksConfig && azCount < 2) {
+    throw new AppError(
+      `EKS requires subnets in at least 2 Availability Zones (got az_count=${azCount}). ` +
+      'Increase networkConfig.azCount to 2 or more.',
+      422
+    );
+  }
+
+  return azCount;
+}
+
+/**
  * Returns backend.tf content using S3 remote backend parameters.
  */
 function buildBackendTf(templateData) {
@@ -41,7 +65,9 @@ function generateNetworkFiles({ serviceSlug, environment, networkConfig, stateBu
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
   files['variables.tf'] = generateVariablesTf();
   files['outputs.tf'] = generateOutputsTf('network');
-  files['main.tf'] = generateMainTf({ network: { ...networkConfig, serviceSlug, environment } });
+  files['main.tf'] = generateMainTf({
+    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, null) },
+  });
   files['terraform.tfvars'] = `aws_region = "${networkConfig.region}"\n`;
 
   return files;
@@ -106,6 +132,7 @@ function generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig, 
     awsRegion: eksConfig.region || networkConfig.region,
     stateBucket,
     lockTable,
+    eksEnabled: true,
   };
 
   const files = {};
@@ -115,7 +142,7 @@ function generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig, 
   files['variables.tf'] = generateVariablesTf({ eksEnabled: true });
   files['outputs.tf'] = generateOutputsTf('network') + generateOutputsTf('eks');
   files['main.tf'] = generateMainTf({
-    network: { ...networkConfig, serviceSlug, environment },
+    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, eksConfig) },
     eks: { ...eksConfig, serviceSlug, environment },
   });
   files['terraform.tfvars'] =
@@ -148,7 +175,7 @@ function generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig, st
   files['variables.tf'] = generateVariablesTf();
   files['outputs.tf'] = generateOutputsTf('network') + generateOutputsTf('vm');
   files['main.tf'] = generateMainTf({
-    network: { ...networkConfig, serviceSlug, environment },
+    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, null) },
     vm: { ...vmConfig, serviceSlug, environment },
   });
   files['terraform.tfvars'] = `aws_region = "${templateData.awsRegion}"\n`;
@@ -201,6 +228,7 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
     awsRegion,
     stateBucket: stateBucketOverride,
     lockTable: lockTableOverride,
+    eksEnabled: Boolean(eksConfig),
   };
 
   const files = {};
@@ -216,7 +244,7 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
     (vmConfig ? generateOutputsTf('vm') : '');
 
   files['main.tf'] = generateMainTf({
-    network: { ...networkConfig, serviceSlug, environment },
+    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, eksConfig) },
     ecr: ecrConfig ? { ...ecrConfig, serviceSlug, environment } : undefined,
     eks: eksConfig ? { ...eksConfig, serviceSlug, environment } : undefined,
     vm: vmConfig ? { ...vmConfig, serviceSlug, environment } : undefined,

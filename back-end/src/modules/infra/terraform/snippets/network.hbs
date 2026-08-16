@@ -1,7 +1,8 @@
 module "network" {
   source = "./modules/network"
 
-  name   = "{{name}}"
-  region = "{{region}}"
-  cidr   = "{{cidr}}"
+  name     = "{{name}}"
+  region   = "{{region}}"
+  cidr     = "{{cidr}}"
+  az_count = {{azCount}}
 }

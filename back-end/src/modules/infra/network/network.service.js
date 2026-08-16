@@ -38,6 +38,7 @@ async function createVpc(userId, serviceId, data) {
     name: data.name,
     region: data.region,
     cidr: data.cidr,
+    az_count: data.azCount ?? 2,
   });
 }
 
@@ -74,6 +75,7 @@ function toGeneratorConfig(network, { serviceSlug, environment }) {
     name: network.name,
     region: network.region,
     cidr: network.cidr,
+    azCount: network.az_count,
     serviceSlug,
     environment,
   };

@@ -32,6 +32,15 @@ const Network = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    az_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 2,
+      validate: {
+        min: 1,
+        max: 6,
+      },
+    },
     status: {
       type: DataTypes.ENUM("pending", "applied", "destroyed"),
       allowNull: false,

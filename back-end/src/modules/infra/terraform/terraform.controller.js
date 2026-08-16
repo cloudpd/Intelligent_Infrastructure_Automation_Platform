@@ -7,6 +7,23 @@ const ecrService = require('../ecr/ecr.service');
 const eksService = require('../EKS/eks.service');
 const vmService = require('../vm/vm.service');
 const awsService = require('../../aws/aws.service');
+const terraformStateService = require('../terraform-state/terraformState.service');
+
+/**
+ * The Terraform Setup Wizard (`/terraform/setup`) saves the S3 backend
+ * bucket/lock-table into the `terraform_states` table, keyed by service_id
+ * — not by vpcId/vmId/clusterId, which is all these per-resource generate
+ * endpoints receive. This resolves the service that owns the given
+ * resource, then reads its saved backend config, so the caller never has
+ * to re-supply a bucket the wizard already collected. Throws a clear,
+ * actionable error if the wizard's S3 step was never completed for this
+ * service.
+ */
+async function resolveBackendConfig(userId, serviceId) {
+  const state = await terraformStateService.getState(userId, serviceId);
+  return { stateBucket: state.s3_bucket, lockTable: state.lock_table };
+}
+
 
 async function applyTerraformResources({
   resourceType,
@@ -68,12 +85,11 @@ async function generateNetworkFiles(req, res, next) {
   try {
     const { serviceSlug = 'service', environment = 'dev' } = req.body;
 
-    const networkConfig = await networkService.getGeneratorConfig(req.user.id, req.params.vpcId, {
-      serviceSlug,
-      environment,
-    });
+    const network = await networkService.getOwnedVpc(req.params.vpcId, req.user.id);
+    const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, network.service_id);
+    const networkConfig = networkService.toGeneratorConfig(network, { serviceSlug, environment });
 
-    const files = terraformService.generateNetworkFiles({ serviceSlug, environment, networkConfig });
+    const files = terraformService.generateNetworkFiles({ serviceSlug, environment, networkConfig, stateBucket, lockTable });
 
     const moduleDir = path.join(terraformService.TEMPLATE_DIR, 'modules', 'network');
     files['modules/network/main.tf'] = fs.readFileSync(path.join(moduleDir, 'main.tf'), 'utf8');
@@ -100,12 +116,11 @@ async function generateEcrFiles(req, res, next) {
   try {
     const { serviceSlug = 'service', environment = 'dev' } = req.body;
 
-    const ecrConfig = await ecrService.getGeneratorConfig(req.user.id, req.params.repoId, {
-      serviceSlug,
-      environment,
-    });
+    const repo = await ecrService.getOwnedRepo(req.params.repoId, req.user.id);
+    const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, repo.service_id);
+    const ecrConfig = ecrService.toGeneratorConfig(repo, { serviceSlug, environment });
 
-    const files = terraformService.generateEcrFiles({ serviceSlug, environment, ecrConfig });
+    const files = terraformService.generateEcrFiles({ serviceSlug, environment, ecrConfig, stateBucket, lockTable });
 
     const moduleDir = path.join(terraformService.TEMPLATE_DIR, 'modules', 'ecr');
     files['modules/ecr/main.tf'] = fs.readFileSync(path.join(moduleDir, 'main.tf'), 'utf8');
@@ -152,13 +167,16 @@ async function generateEksFiles(req, res, next) {
   try {
     const { serviceSlug = 'service', environment = 'dev' } = req.body;
 
+    const cluster = await eksService.getOwnedCluster(req.params.clusterId, req.user.id);
+    const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, cluster.service_id);
+
     const networkConfig = await networkService.getGeneratorConfig(req.user.id, req.params.vpcId, {
       serviceSlug,
       environment,
     });
-    const eksConfig = await eksService.getGeneratorConfig(req.user.id, req.params.clusterId);
+    const eksConfig = eksService.toGeneratorConfig(cluster);
 
-    const files = terraformService.generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig });
+    const files = terraformService.generateEksFiles({ serviceSlug, environment, networkConfig, eksConfig, stateBucket, lockTable });
 
     const outputDir = path.join(
       process.cwd(),
@@ -190,16 +208,16 @@ async function generateVmFiles(req, res, next) {
   try {
     const { serviceSlug = 'service', environment = 'dev' } = req.body;
 
+    const vm = await vmService.getOwnedVm(req.params.vmId, req.user.id);
+    const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, vm.service_id);
+
     const networkConfig = await networkService.getGeneratorConfig(req.user.id, req.params.vpcId, {
       serviceSlug,
       environment,
     });
-    const vmConfig = await vmService.getGeneratorConfig(req.user.id, req.params.vmId, {
-      serviceSlug,
-      environment,
-    });
+    const vmConfig = vmService.toGeneratorConfig(vm, { serviceSlug, environment });
 
-    const files = terraformService.generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig });
+    const files = terraformService.generateVmFiles({ serviceSlug, environment, networkConfig, vmConfig, stateBucket, lockTable });
 
     const outputDir = path.join(process.cwd(), 'generated', serviceSlug, environment);
 
@@ -238,6 +256,8 @@ async function generateServiceFiles(req, res, next) {
     const { serviceId } = req.params;
     const { serviceSlug, environment = 'dev' } = req.body;
 
+    const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, serviceId);
+
     // Network is mandatory — resolved first, and its absence is a hard
     // error, not a "skip this module" case like the other three below.
     const networkConfig = await networkService.getGeneratorConfigForService(req.user.id, serviceId, {
@@ -271,6 +291,8 @@ async function generateServiceFiles(req, res, next) {
       ecrConfig,
       eksConfig,
       vmConfig,
+      stateBucketOverride: stateBucket,
+      lockTableOverride: lockTable,
     });
 
     const outputDir = path.join(process.cwd(), 'generated', resolvedSlug, environment);
