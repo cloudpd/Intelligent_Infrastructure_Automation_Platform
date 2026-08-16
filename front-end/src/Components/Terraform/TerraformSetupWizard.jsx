@@ -30,6 +30,17 @@ export default function TerraformSetupWizard() {
   // Step 3 — Registry
   const [useEcr, setUseEcr] = useState(true);
 
+  // Step 4 — Network
+  const [networkForm, setNetworkForm] = useState({
+    name: 'demo-network',
+    region: 'us-east-1',
+    cidr: '10.0.0.0/16',
+  });
+  const [existingVpc, setExistingVpc] = useState(null);
+  const [loadingExistingNetwork, setLoadingExistingNetwork] = useState(false);
+  const [loadingNetworkStep, setLoadingNetworkStep] = useState(false);
+  const [savingNetwork, setSavingNetwork] = useState(false);
+
   const authHeaders = useMemo(() => {
     const token = localStorage.getItem('token');
     return { Authorization: `Bearer ${token}` };
@@ -58,6 +69,41 @@ export default function TerraformSetupWizard() {
       .finally(() => setLoadingCredentials(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!serviceId) return;
+
+    setLoadingExistingNetwork(true);
+    fetch(`${API_URL}/infra/network/${serviceId}/vpcs`, { headers: authHeaders })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const list = Array.isArray(data?.data) ? data.data : [];
+        const firstVpc = list[0] || null;
+        setExistingVpc(firstVpc);
+
+        if (firstVpc) {
+          setNetworkForm({
+            name: firstVpc.name || 'demo-network',
+            region: firstVpc.region || 'us-east-1',
+            cidr: firstVpc.cidr || '10.0.0.0/16',
+          });
+        } else {
+          setNetworkForm({
+            name: 'demo-network',
+            region: 'us-east-1',
+            cidr: '10.0.0.0/16',
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load VPCs:', err);
+        setExistingVpc(null);
+      })
+      .finally(() => setLoadingExistingNetwork(false));
+  }, [authHeaders, serviceId]);
 
   async function handleSaveCredentialAndContinue() {
     setError('');
@@ -108,10 +154,81 @@ export default function TerraformSetupWizard() {
     setStep(3);
   }
 
+  async function prepareNetworkStep() {
+    setError('');
+    setLoadingNetworkStep(true);
+    try {
+      const res = await fetch(`${API_URL}/infra/network/${serviceId}/vpcs`, { headers: authHeaders });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || `Request failed with status ${res.status}`);
+      }
+
+      const list = Array.isArray(data?.data) ? data.data : [];
+      const firstVpc = list[0] || null;
+      setExistingVpc(firstVpc);
+
+      if (firstVpc) {
+        setNetworkForm({
+          name: firstVpc.name || 'demo-network',
+          region: firstVpc.region || 'us-east-1',
+          cidr: firstVpc.cidr || '10.0.0.0/16',
+        });
+      } else {
+        setNetworkForm({
+          name: 'demo-network',
+          region: 'us-east-1',
+          cidr: '10.0.0.0/16',
+        });
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setStep(4);
+    } catch (err) {
+      setError(err.message || 'Could not load the network setup.');
+    } finally {
+      setLoadingNetworkStep(false);
+    }
+  }
+
   async function handleFinish() {
     setError('');
     setSubmitting(true);
+    setSavingNetwork(true);
+
     try {
+      const name = networkForm.name.trim();
+      const region = networkForm.region.trim();
+      const cidr = networkForm.cidr.trim();
+
+      if (!name || !region || !cidr) {
+        throw new Error('Please complete the VPC name, region, and CIDR block.');
+      }
+
+      const networkPayload = { name, region, cidr };
+
+      if (existingVpc && existingVpc.id) {
+        const patchRes = await fetch(`${API_URL}/infra/network/vpcs/${existingVpc.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(networkPayload),
+        });
+        const patchData = await patchRes.json().catch(() => null);
+        if (!patchRes.ok) {
+          throw new Error(patchData?.message || `Request failed with status ${patchRes.status}`);
+        }
+      } else {
+        const networkRes = await fetch(`${API_URL}/infra/network/${serviceId}/vpcs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(networkPayload),
+        });
+        const networkData = await networkRes.json().catch(() => null);
+        if (!networkRes.ok) {
+          throw new Error(networkData?.message || `Request failed with status ${networkRes.status}`);
+        }
+      }
+
       const res = await fetch(`${API_URL}/terraform/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
@@ -132,7 +249,12 @@ export default function TerraformSetupWizard() {
       setError(err.message || 'Could not save Terraform setup.');
     } finally {
       setSubmitting(false);
+      setSavingNetwork(false);
     }
+  }
+
+  function updateNetworkField(field, value) {
+    setNetworkForm((prev) => ({ ...prev, [field]: value }));
   }
 
   return (
@@ -140,7 +262,7 @@ export default function TerraformSetupWizard() {
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Terraform Setup Wizard</h1>
-          <p className='projects-subtitle'>Step {step} of 3</p>
+          <p className='projects-subtitle'>Step {step} of 4</p>
         </div>
       </header>
 
@@ -289,8 +411,109 @@ export default function TerraformSetupWizard() {
               <button type='button' className='project-button project-button--ghost' onClick={() => setStep(2)} disabled={submitting}>
                 Back
               </button>
-              <button type='button' className='project-button project-button--primary' onClick={handleFinish} disabled={submitting}>
-                {submitting ? 'Saving...' : 'Continue'}
+              <button type='button' className='project-button project-button--primary' onClick={prepareNetworkStep} disabled={submitting || loadingExistingNetwork || loadingNetworkStep}>
+                {loadingNetworkStep ? 'Checking network...' : 'Continue'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <h2 className='terraform-step-title'>Network</h2>
+            {existingVpc ? (
+              <p className='projects-subtitle'>This service already has a VPC. Update it before continuing.</p>
+            ) : (
+              <p className='projects-subtitle'>Create the VPC that the Terraform modules will use.</p>
+            )}
+
+            {existingVpc ? (
+              <>
+                <label className='terraform-field-label' htmlFor='existingVpc'>Current VPC</label>
+                <input
+                  id='existingVpc'
+                  className='terraform-input'
+                  type='text'
+                  value={`${existingVpc.name || 'vpc'} (${existingVpc.region || 'us-east-1'})`}
+                  readOnly
+                />
+                <label className='terraform-field-label' htmlFor='networkName'>VPC Name</label>
+                <input
+                  id='networkName'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.name}
+                  onChange={(e) => updateNetworkField('name', e.target.value)}
+                  placeholder='demo-network'
+                />
+
+                <label className='terraform-field-label' htmlFor='networkRegion'>Region</label>
+                <input
+                  id='networkRegion'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.region}
+                  onChange={(e) => updateNetworkField('region', e.target.value)}
+                  placeholder='us-east-1'
+                />
+
+                <label className='terraform-field-label' htmlFor='networkCidr'>CIDR Block</label>
+                <input
+                  id='networkCidr'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.cidr}
+                  onChange={(e) => updateNetworkField('cidr', e.target.value)}
+                  placeholder='10.0.0.0/16'
+                />
+              </>
+            ) : (
+              <>
+                <label className='terraform-field-label' htmlFor='networkName'>VPC Name</label>
+                <input
+                  id='networkName'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.name}
+                  onChange={(e) => updateNetworkField('name', e.target.value)}
+                  placeholder='demo-network'
+                />
+
+                <label className='terraform-field-label' htmlFor='networkRegion'>Region</label>
+                <input
+                  id='networkRegion'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.region}
+                  onChange={(e) => updateNetworkField('region', e.target.value)}
+                  placeholder='us-east-1'
+                />
+
+                <label className='terraform-field-label' htmlFor='networkCidr'>CIDR Block</label>
+                <input
+                  id='networkCidr'
+                  className='terraform-input'
+                  type='text'
+                  value={networkForm.cidr}
+                  onChange={(e) => updateNetworkField('cidr', e.target.value)}
+                  placeholder='10.0.0.0/16'
+                />
+              </>
+            )}
+
+            {loadingExistingNetwork && <p className='projects-subtitle'>Checking your existing VPCs...</p>}
+            {error && <p className='terraform-error'>{error}</p>}
+            <div className='terraform-actions'>
+              <button type='button' className='project-button project-button--ghost' onClick={() => setStep(3)} disabled={submitting}>
+                Back
+              </button>
+              <button
+                type='button'
+                className='project-button project-button--primary'
+                onClick={handleFinish}
+                disabled={submitting || loadingExistingNetwork || savingNetwork}
+              >
+                {submitting ? 'Saving...' : (existingVpc ? 'Update VPC' : 'Create VPC')}
               </button>
             </div>
           </>

@@ -17,7 +17,10 @@ const createVpcSchema = Joi.object({
 
 const updateVpcSchema = Joi.object({
   name: Joi.string().min(2).max(64).pattern(/^[a-z][a-z0-9-]*$/).required(),
-  // region and cidr are not updatable after creation.
+  region: Joi.string().pattern(AWS_REGION_PATTERN).required(),
+  cidr: Joi.string().pattern(CIDR_PATTERN).required().messages({
+    'string.pattern.base': 'Must be a valid CIDR block, e.g. 10.0.0.0/16',
+  }),
 });
 
 module.exports = { createVpcSchema, updateVpcSchema };

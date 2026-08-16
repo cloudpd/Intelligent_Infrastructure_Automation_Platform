@@ -33,6 +33,37 @@ async function getOwnedVpc(vpcId, userId) {
 
 async function createVpc(userId, serviceId, data) {
   await getOwnedService(serviceId, userId);
+
+  const existing = await Network.findOne({ where: { service_id: serviceId } });
+  if (existing) {
+    const nextName = data.name?.trim();
+    const nextRegion = data.region?.trim();
+    const nextCidr = data.cidr?.trim();
+
+    console.log('Existing VPC found:', existing.toJSON());
+
+    if (nextRegion && nextRegion !== existing.region) {
+      throw new AppError(
+        'This service already has a VPC. Update the existing network.',
+        409
+      );
+    }
+
+    if (nextCidr && nextCidr !== existing.cidr) {
+      throw new AppError(
+        'This service already has a VPC. Update the existing network instead of creating another one with a different CIDR block.',
+        409
+      );
+    }
+
+    if (nextName && nextName !== existing.name) {
+      await existing.update({ name: nextName });
+      return existing.reload();
+    }
+
+    return existing;
+  }
+
   return Network.create({
     service_id: serviceId,
     name: data.name,
