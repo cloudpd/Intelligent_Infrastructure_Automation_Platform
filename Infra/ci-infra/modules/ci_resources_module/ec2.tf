@@ -11,7 +11,7 @@ resource "aws_instance" "ec2_bastion_host_ci_vpc" {
 
   vpc_security_group_ids      = [aws_security_group.Bastion_SG_allow_ssh_from_anywhere.id] # use bastion SG
   associate_public_ip_address = true                                                       # create public ip
-  key_name                    = "ssh-private-key"                                          # use key pair this 
+  key_name                    = "gp-ci-instance-private-key"                                          # use key pair this 
   tags = {
     Name = "Bastion_host"
   }
@@ -36,7 +36,7 @@ resource "aws_instance" "CI_Master" {
   subnet_id     = var.list_private_subnets_ids[0] # get the first one each time  # this each time should be in same AZ 1a  and should later take backeup of the ebs in 
 
   vpc_security_group_ids      = [aws_security_group.CI_Master_SG_allow_ssh_from_Bastion_SG_and_allow_8080_from_ALB_SG.id]
-  key_name                    = "ssh-private-key"
+  key_name                    = "gp-ci-instance-private-key"
   associate_public_ip_address = false
 
   # user_data= file("${path.module}/jenkins_master_userdata_setup.sh")                                                                   # create public ip
@@ -80,7 +80,7 @@ resource "aws_instance" "CI_Agent" {
     aws_security_group.CI_Agent_SG_allow_ssh_from_Bastion_SG_and_allow_22_50000_from_Master_SG.id
   ]
 
-  key_name                    = "ssh-private-key"
+  key_name                    = "gp-ci-instance-private-key"
   associate_public_ip_address = false
   root_block_device {
     volume_size           = 20
@@ -115,12 +115,12 @@ Host bastion
   HostName ${aws_instance.ec2_bastion_host_ci_vpc.public_ip}
   User ec2-user
   StrictHostKeyChecking no
-  IdentityFile ~/ssh-private-key.pem
+  IdentityFile ~/gp-ci-instance-private-key.pem
 
 Host ci-master
   HostName ${aws_instance.CI_Master.private_ip}
   User ec2-user
-  IdentityFile ~/ssh-private-key.pem
+  IdentityFile ~/gp-ci-instance-private-key.pem
   StrictHostKeyChecking no
   ProxyJump bastion
 
@@ -130,7 +130,7 @@ ${join("\n\n", [
 Host ci-agent-${idx + 1}
   HostName ${ip}
   User ec2-user
-  IdentityFile ~/ssh-private-key.pem
+  IdentityFile ~/gp-ci-instance-private-key.pem
   StrictHostKeyChecking no
   ProxyJump bastion
 EOT
@@ -166,7 +166,7 @@ ${join("\n", [
 
 [all:vars]
 ansible_user=ec2-user
-ansible_ssh_private_key_file=~/ssh-private-key.pem
+ansible_ssh_private_key_file=~/gp-ci-instance-private-key.pem
 ansible_ssh_common_args='-o ProxyJump=bastion'
 CONFIG
 EOF
