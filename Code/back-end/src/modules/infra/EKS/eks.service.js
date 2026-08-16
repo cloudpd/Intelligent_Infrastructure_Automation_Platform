@@ -5,6 +5,7 @@ const { Project } = require('../../projects/projects.model');
 const { Network } = require('../network/network.model');
 const { VmDeployment } = require('../vm/vm.model');
 const { EksCluster } = require('./eks.model');
+const { pushRepoSecrets, parseRepoUrl } = require('../../github/github.service');
 
 /** Verify the service exists and is owned by this user (via project → owner_id). */
 async function getOwnedService(serviceId, userId) {
@@ -82,8 +83,43 @@ async function assertNoVmDeployment(serviceId) {
   }
 }
 
+/**
+ * Pushes the cluster's name and region to the service's GitHub repo as
+ * Actions secrets (EKS_CLUSTER_NAME / AWS_REGION), via the existing
+ * pushRepoSecrets() from the github module. Best-effort: a GitHub/PAT
+ * failure here must not undo the EKS cluster row we already committed to
+ * the DB (the cluster is still real infra config either way), so we catch
+ * and attach the failure to the returned cluster instead of throwing.
+ */
+async function syncClusterSecretsToGithub(userId, serviceId, cluster, repositoryUrl) {
+  // repoFullName is derived locally (not returned by pushRepoSecrets) purely
+  // so the caller/UI can say *which* repo got the secrets.
+  let repoFullName = null;
+  try {
+    const { owner, repo } = parseRepoUrl(repositoryUrl);
+    repoFullName = `${owner}/${repo}`;
+  } catch {
+    // Malformed repository_url — pushRepoSecrets will hit the same problem
+    // and report it below; repoFullName just stays null.
+  }
+
+  try {
+    await pushRepoSecrets({
+      userId,
+      serviceId,
+      secrets: {
+        EKS_CLUSTER_NAME: cluster.cluster_name,
+        AWS_REGION: cluster.region,
+      },
+    });
+    return { synced: true, repoFullName, secretNames: ['EKS_CLUSTER_NAME', 'AWS_REGION'] };
+  } catch (err) {
+    return { synced: false, repoFullName, error: err.message };
+  }
+}
+
 async function createCluster(userId, serviceId, data) {
-  await getOwnedService(serviceId, userId);
+  const service = await getOwnedService(serviceId, userId);
   await assertNetworkExists(serviceId);
   await assertNoVmDeployment(serviceId);
 
@@ -92,7 +128,7 @@ async function createCluster(userId, serviceId, data) {
     throw new AppError('This service already has an EKS cluster', 409);
   }
 
-  return EksCluster.create({
+  const cluster = await EksCluster.create({
     service_id: serviceId,
     cluster_name: data.clusterName,
     cluster_version: data.clusterVersion,
@@ -108,6 +144,10 @@ async function createCluster(userId, serviceId, data) {
     enable_external_dns: data.enableExternalDns,
     enable_external_secrets: data.enableExternalSecrets,
   });
+
+  const githubSync = await syncClusterSecretsToGithub(userId, serviceId, cluster, service.repository_url);
+
+  return { ...cluster.toJSON(), githubSync };
 }
 
 async function listClusters(userId, serviceId) {

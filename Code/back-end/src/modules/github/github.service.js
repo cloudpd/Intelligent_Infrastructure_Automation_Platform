@@ -140,7 +140,7 @@ async function pushRepoSecrets({ userId, serviceId, secrets }) {
     );
   }
 
-  return { serviceId, pushedSecrets };
+  return { serviceId, repoFullName: `${owner}/${repo}`, pushedSecrets };
 }
 
 async function pushFileToRepo({ accessToken, owner, repo, path, content, branch, commitMessage }) {

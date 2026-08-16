@@ -174,7 +174,21 @@ export default function TerraformConfiguration() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
 
-      setActionSuccess('EKS cluster generated successfully.');
+      // createData.data is the EksCluster row plus a githubSync summary
+      // (see eks.service.js#syncClusterSecretsToGithub) that tells us
+      // whether EKS_CLUSTER_NAME / AWS_REGION actually landed in the repo.
+      const githubSync = createData?.data?.githubSync;
+      if (githubSync?.synced) {
+        setActionSuccess(
+          `EKS cluster generated successfully. Cluster name and region were added as secrets to ${githubSync.repoFullName}.`
+        );
+      } else if (githubSync && !githubSync.synced) {
+        setActionSuccess(
+          `EKS cluster generated successfully, but pushing secrets to ${githubSync.repoFullName || 'the repository'} failed: ${githubSync.error}. You can retry from the GitHub tokens page.`
+        );
+      } else {
+        setActionSuccess('EKS cluster generated successfully.');
+      }
       fetchState();
     } catch (err) {
       setActionError(err.message || 'Could not generate EKS cluster files.');
@@ -188,6 +202,7 @@ export default function TerraformConfiguration() {
     setGenerating(true);
     setActionError('');
     setActionSuccess('');
+    let eksGithubSync = null; // filled in when deploymentType === 'eks' and creation succeeds
     try {
       if (deploymentType === 'vm') {
         const createRes = await fetch(`${API_URL}/infra/vm/${serviceId}/vms`, {
@@ -274,6 +289,31 @@ export default function TerraformConfiguration() {
         }
       }
 
+      if (deploymentType === 'eks') {
+        // Push EKS_CLUSTER_NAME / AWS_REGION to the repo's Actions secrets
+        // on every Generate click — not just on first creation — so an
+        // update (PATCH path above) also re-syncs them. clusterName/region
+        // are immutable after creation (see eks.validation.js), so
+        // eksForm's values always match what's actually stored, whether
+        // this run created or updated the cluster.
+        const secretsRes = await fetch(`${API_URL}/github/${serviceId}/secrets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({
+            secrets: {
+              EKS_CLUSTER_NAME: eksForm.clusterName,
+              AWS_REGION: eksForm.region,
+            },
+          }),
+        });
+        const secretsData = await secretsRes.json().catch(() => null);
+        if (secretsRes.ok) {
+          eksGithubSync = { synced: true, repoFullName: secretsData?.result?.repoFullName };
+        } else {
+          eksGithubSync = { synced: false, error: secretsData?.message || `Request failed with status ${secretsRes.status}` };
+        }
+      }
+
       const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
@@ -281,13 +321,21 @@ export default function TerraformConfiguration() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
-      setActionSuccess(
-        deploymentType === 'vm'
-          ? 'VM deployment and Terraform files generated successfully.'
-          : deploymentType === 'eks'
-            ? 'EKS cluster and Terraform files generated successfully.'
-            : 'Terraform files generated successfully.'
-      );
+
+      let successMessage;
+      if (deploymentType === 'vm') {
+        successMessage = 'VM deployment and Terraform files generated successfully.';
+      } else if (deploymentType === 'eks') {
+        successMessage = 'EKS cluster and Terraform files generated successfully.';
+        if (eksGithubSync?.synced) {
+          successMessage += ` Region: ${eksForm.region}, Cluster name: ${eksForm.clusterName} were pushed to GitHub repo: ${eksGithubSync.repoFullName} as secrets.`;
+        } else if (eksGithubSync && !eksGithubSync.synced) {
+          successMessage += ` Note: pushing region/cluster name to GitHub secrets failed (${eksGithubSync.error}) — add a GitHub token and retry.`;
+        }
+      } else {
+        successMessage = 'Terraform files generated successfully.';
+      }
+      setActionSuccess(successMessage);
       fetchState();
     } catch (err) {
       setActionError(err.message || 'Could not generate Terraform files.');
