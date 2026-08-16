@@ -1,0 +1,71 @@
+- name: mount EFS over jenkins home and restart
+  hosts: master
+  become: true
+  vars:
+    mount_point: /var/lib/jenkins
+    max_attempts: 60
+    sleep_seconds: 10
+  tasks:
+
+    - name: Stop Jenkins before remounting its data directory
+      systemd:
+        name: jenkins
+        state: stopped
+
+    - name: Wait for EFS mount to succeed (retries for DNS/mount-target propagation)
+      shell: |
+        mount -t efs -o tls "{{ efs_id }}:/" "{{ mount_point }}"
+      register: mount_result
+      retries: "{{ max_attempts }}"
+      delay: "{{ sleep_seconds }}"
+      until: mount_result.rc == 0
+      changed_when: mount_result.rc == 0
+
+    - name: Persist the mount in fstab
+      lineinfile:
+        path: /etc/fstab
+        line: "{{ efs_id }}:/  {{ mount_point }}  efs  _netdev,tls,nofail  0  0"
+        state: present
+        create: true
+
+    - name: Set ownership for jenkins user
+      file:
+        path: "{{ mount_point }}"
+        owner: jenkins
+        group: jenkins
+        recurse: true
+
+    - name: Start Jenkins on top of the mounted EFS data
+      systemd:
+        name: jenkins
+        state: started
+
+    - name: Wait for Jenkins HTTP endpoint after remount
+      uri:
+        url: http://localhost:8080/login
+        status_code: 200
+      register: jenkins_status
+      retries: 30
+      delay: 5
+      until: jenkins_status.status == 200
+
+    - name: Check if this is a first-time install (initialAdminPassword file exists)
+      stat:
+        path: /var/lib/jenkins/secrets/initialAdminPassword
+      register: admin_pw_file
+
+    - name: Read initial admin password (first run only)
+      slurp:
+        src: /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_admin_pw
+      when: admin_pw_file.stat.exists
+
+    - name: Show initial admin password (use this in the setup wizard)
+      debug:
+        msg: "Jenkins initial admin password: {{ jenkins_admin_pw.content | b64decode | trim }}"
+      when: admin_pw_file.stat.exists
+
+    - name: Note for restored volumes (Jenkins already configured previously)
+      debug:
+        msg: "No initialAdminPassword file found - this volume already has an existing Jenkins config. Log in with your previous admin credentials."
+      when: not admin_pw_file.stat.exists

@@ -1,0 +1,53 @@
+- name: set up ci-agent as self hosted runner
+  hosts: agents
+  become: true
+
+  vars:
+    jenkins_homedir: /home/ec2-user/jenkins-agent
+  
+  tasks:
+
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install Java 21 and git
+      yum:
+        name:
+          - java-21-amazon-corretto
+          - git
+        state: present
+      become: true
+
+    - name: Install Docker (for containerized builds)
+      yum:
+        name: docker
+        state: present
+      become: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+
+    - name: Create Jenkins agent work directory
+      ansible.builtin.file:
+        path: "{{ jenkins_homedir }}"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
+      become: true
+
+    - name: Show this agent's private IP (use it when adding the node in the Jenkins UI)
+      ansible.builtin.debug:
+        msg: "Agent ready. Private IP: {{ ansible_default_ipv4.address }}"
