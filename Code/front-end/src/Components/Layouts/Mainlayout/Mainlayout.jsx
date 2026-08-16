@@ -2,7 +2,7 @@
 import React from 'react'
 import Navbar from '../../Navbar/Navbar.jsx'
 import { Outlet, useLocation } from 'react-router-dom'
-import Footer from '../../Footer/Footer'
+import Footer from '../../Footer/Footer.jsx'
 
 export default function Mainlayout() {
   const location = useLocation();

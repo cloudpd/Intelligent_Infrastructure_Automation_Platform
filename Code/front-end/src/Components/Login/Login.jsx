@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useFormik } from 'formik'
 import React, { useContext, useState } from 'react'
-import { baseUrl } from '../Shared/baseUrl'
+import { baseUrl } from '../Shared/baseUrl.js'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import * as Yup from 'yup'
 import { authContext } from '../../Context/AuthContext.jsx'
@@ -26,7 +26,7 @@ export default function Login() {
             try {
                 setSpin(true);
                 setErrMsg('');
-                const { data } = await axios.post(baseUrl + 'auth/login', values);
+                const { data } = await axios.post(baseUrl + '/auth/login', values);
 
                 if (data.success === true) {
                     setSucMsg('Welcome back');

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Projects.css'
 import AddNewProject from './AddNewProject'
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000'
 
 
 function ProjectCard({project}) {

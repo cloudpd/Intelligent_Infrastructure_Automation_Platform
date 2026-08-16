@@ -14,8 +14,8 @@ import {
   StepHealthChecks,
   StepAutoscaling,
 } from './WizardSteps';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const STEPS = [
   { key: 'application', title: 'Application', Component: StepApplication },

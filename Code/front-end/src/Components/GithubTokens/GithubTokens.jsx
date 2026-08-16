@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import '../Projects/Projects.css'; // reuse the same visual style as Projects
 import AddNewToken from './AddNewToken';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function TokenCard({ tokenData, onDelete }) {
   const id = tokenData.id || tokenData._id;

@@ -23,7 +23,7 @@ export default function Register() {
       setSpin(true)
       setErrMsg('')
 
-      await axios.post(baseUrl + 'auth/signup', values)
+      await axios.post(baseUrl + '/auth/signup', values)
         .then(() => {
           notify();
           setSucMsg('Registered successfully');

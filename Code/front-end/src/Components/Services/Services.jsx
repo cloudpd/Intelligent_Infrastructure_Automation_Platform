@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../Projects/Projects.css';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function Services() {
   const [services, setServices] = useState([]);

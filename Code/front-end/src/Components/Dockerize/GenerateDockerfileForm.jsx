@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import reloadIcon from '../../finalProject assets/reload.jpg';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const LANGUAGES = [
   { value: 'node', label: 'Node.js' },
   { value: 'python', label: 'Python' },

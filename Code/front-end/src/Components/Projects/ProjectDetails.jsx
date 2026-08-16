@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ServiceCard, ServiceCreateModal } from '../Services';
 import './Projects.css';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function ProjectDetails() {
   const { projectId } = useParams();

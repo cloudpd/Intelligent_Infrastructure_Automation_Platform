@@ -1,10 +1,10 @@
 import { useFormik } from 'formik'
 import React, { useContext, useState } from 'react'
-import { baseUrl } from '../Shared/baseUrl';
+import { baseUrl } from '../Shared/baseUrl.js';
 import axios from 'axios';
 import { authContext } from '../../Context/AuthContext.jsx';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { notify } from '../Shared/notify';
+import { notify } from '../Shared/notify.js';
 
 export default function Recovery() {
 
@@ -34,7 +34,7 @@ export default function Recovery() {
 
                 try {
 
-                    let { data: { message, statusMsg } } = await axios.post(baseUrl + 'auth/forgotPasswords', values);
+                    let { data: { message, statusMsg } } = await axios.post(baseUrl + '/auth/forgotPasswords', values);
                     if (statusMsg == 'success') {
                         setMsg(message);
 
@@ -61,7 +61,7 @@ export default function Recovery() {
 
                 try {
 
-                    let { data: { status } } = await axios.post(baseUrl + 'auth/verifyResetCode', values);
+                    let { data: { status } } = await axios.post(baseUrl + '/auth/verifyResetCode', values);
                     if (status == 'Success') {
                         setShow(3);
                     }
@@ -108,7 +108,7 @@ export default function Recovery() {
 
                 try {
 
-                    let { data: { token } } = await axios.put(baseUrl + 'auth/resetPassword', values);
+                    let { data: { token } } = await axios.put(baseUrl + '/auth/resetPassword', values);
                     setToken(token);
                     localStorage.setItem('token', token);
                     notify('password reset successfull', 'success', 'top-center')

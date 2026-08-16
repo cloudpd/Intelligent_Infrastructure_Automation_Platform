@@ -4,8 +4,8 @@ import '../Projects/Projects.css';
 import './ci-service.css';
 import SecretForm from './SecretForm';
 import CIForm from './CIForm';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function CIServicePage() {
     const { projectId, serviceId } = useParams();
