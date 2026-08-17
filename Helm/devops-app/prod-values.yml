@@ -22,32 +22,36 @@
 
 
 
-mysql:
-  enabled: false
+# this override default values in postgresql chart
+mysql: # this attribute are waiting for postgresql chart need him to start your bitname/postgres chart 
+  enabled: true # enable the subchart in dev environment, false to disable it in prod and rely on rds
+  auth:
+    username: "infra_app"
+    database: "infra_platform"
+    # rootPassword: "changeme-root"
+    # password: "changeme-app"
+    existingSecret: "mysql-secret" # get password & postgres-password from secret created by external secret
+  primary:
+    persistence:
+      enabled: true
+      storageClass: gp2
+      size: 8Gi
+################ end of mysql ################
+
+
 back-chart:
   image:
-    repository: "youssef11gaber10/gp-back"
-    tag: "test-1b522481"
+    repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-back"
+    tag: "latest"
 front-chart:
   image:
-    repository: "youssef11gaber10/gp-front"
-    tag: "test-eb8b76ec"
+    repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-front"
+    tag: "latest"
+
+
 global:
-  db_host: "terraform-2026073004331701100000000a.c52e88koezpq.eu-north-1.rds.amazonaws.com"
+  db_host: "mysql-svc"
   backend_host: "back-svc"
   frontend_host: "front-svc"
   hostname: "devops-app.mycloudlab.website"
-  back_canary_enabled: true
-  back_canary_weight:
-    stable: 90
-    canary: 10
-  back_canary_image:
-    repository: "youssef11gaber10/gp-back"
-    tag: "test-1b522481"
-  front_canary_enabled: true
-  front_canary_weight:
-    stable: 10
-    canary: 90
-  front_canary_image:
-    repository: "youssef11gaber10/gp-front"
-    tag: "test-e3d55b4d"
+

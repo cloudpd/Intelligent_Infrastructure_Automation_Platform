@@ -9,20 +9,23 @@ pipeline {
     environment {
         FRONT_DIR    = "Code/front-end"
         BACK_DIR     = "Code/back-end"
-        FRONT_IMAGE  = "youssef11gaber10/gp-front"
-        BACK_IMAGE   = "youssef11gaber10/gp-back"
+        FRONT_IMAGE  = "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-front"
+        BACK_IMAGE   = "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-back"
 
-        DEV_VALUES   = "Helm/app-charts/devops-app/dev-values.yml"
-        TEST_VALUES  = "Helm/app-charts/devops-app/test-values.yml"
-        PROD_VALUES  = "Helm/app-charts/devops-app/prod-values.yml"
+        DEV_VALUES   = "Helm/devops-app/dev-values.yml"
+        TEST_VALUES  = "Helm/devops-app/test-values.yml"
+        PROD_VALUES  = "Helm/devops-app/prod-values.yml"
 
-        GIT_REPO_URL = "https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git"
+        GIT_REPO_URL = "https://github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git"
     }
 
     stages {
 
         // ---------- Compute an immutable tag once, reuse it in every later stage ----------
-        // this check if the code changed or not compare HEAD~1 with HEAD see if there git diff between them
+        // Only meaningful on 'dev' (that's the only branch that actually builds).
+        // On test/main we don't rebuild - we just carry forward the tag that was
+        // already built & pushed on dev, so FRONT_CHANGED/BACK_CHANGED here only
+        // drive the dev build decision.
         stage('Prepare') {
             steps {
                 script {
@@ -36,26 +39,23 @@ pipeline {
         }
 
         // =====================================================================
-        // CI — runs on every PR into dev/test/main. No image is built here.
+        // CI — runs only on PRs into dev. dev is the only branch where source
+        // code actually changes; test/main only ever receive promotion commits
+        // (values.yml bumps), so there's nothing new to lint/test there.
         // =====================================================================
 
         stage('Lint & Unit Test - Front') {
             when {
-                anyOf {
-                    changeRequest target: 'dev'
-                    changeRequest target: 'test'
-                    // changeRequest target: 'main'
-                }
+                changeRequest target: 'dev'
                 changeset "${FRONT_DIR}/**"
             }
 
-            agent { 
-
-                docker { 
-                    image "node:18-alpine" 
-                    label "agent-1" 
-                    } 
+            agent {
+                docker {
+                    image "node:18-alpine"
+                    label "agent-1"
                 }
+            }
 
             steps {
                 dir("${FRONT_DIR}") { // install dependencies
@@ -67,24 +67,18 @@ pipeline {
 
         stage('Lint & Unit Test - Back') {
             when {
-                anyOf {
-                    changeRequest target: 'dev'
-                    changeRequest target: 'test'
-                    // changeRequest target: 'main'
-                }
+                changeRequest target: 'dev'
                 changeset "${BACK_DIR}/**"
             }
 
-            agent { 
-                
-                docker { 
-                    image "node:18-alpine" 
-                    label "agent-1" 
-                    } 
+            agent {
+                docker {
+                    image "node:18-alpine"
+                    label "agent-1"
                 }
+            }
 
-
-                steps {
+            steps {
                 dir("${BACK_DIR}") {
                     sh 'npm ci'
                     // TODO: replace with a real test suite - package.json currently has a stub 'test' script
@@ -93,13 +87,9 @@ pipeline {
             }
         }
 
-
         stage('Trivy FS + Config Scan') {
             when {
-                anyOf {
-                    changeRequest target: 'dev'
-                    changeRequest target: 'test'
-                }
+                changeRequest target: 'dev'
             }
             agent {
                 docker {
@@ -109,7 +99,6 @@ pipeline {
                 }
             }
             environment { HOME = "${WORKSPACE}" }
-
 
             steps {
                 script {
@@ -123,14 +112,14 @@ pipeline {
         }
 
         // =====================================================================
-        // CD - dev: real merge/push to dev (not a PR). Build once, deploy.
+        // CD - dev: the ONLY place images get built. Real merge/push to dev
+        // (not a PR). Build once here, scan, push, and everything downstream
+        // (test, prod) just promotes this exact tag.
         // =====================================================================
 
         stage('Build, Scan & Push - Front [dev]') {
             when { allOf { branch 'dev'; not { changeRequest() }; expression { env.FRONT_CHANGED == 'true' } } }
-            agent { 
-                label "agent-1"
-                }
+            agent { label "agent-1" }
             steps {
                 dir("${FRONT_DIR}") { sh "docker build -t ${FRONT_IMAGE}:${IMAGE_TAG} ." }
                 sh """
@@ -150,9 +139,7 @@ pipeline {
 
         stage('Build, Scan & Push - Back [dev]') {
             when { allOf { branch 'dev'; not { changeRequest() }; expression { env.BACK_CHANGED == 'true' } } }
-            agent { 
-                label "agent-1" 
-            }
+            agent { label "agent-1" }
             steps {
                 dir("${BACK_DIR}") { sh "docker build -t ${BACK_IMAGE}:${IMAGE_TAG} ." }
                 sh """
@@ -172,98 +159,114 @@ pipeline {
 
         stage('Promote tag -> dev-values.yml') {
             when { allOf { branch 'dev'; not { changeRequest() } } }
-            agent { 
-                label "agent-1"
-                }
+            agent { label "agent-1" }
             steps {
                 gitOpsBumpTag(env.DEV_VALUES)
             }
         }
 
-        // stage('Smoke Test - Dev') {
-        //     when { allOf { branch 'dev'; not { changeRequest() } } }
-        //     agent { label "agent-1" }
-        //     steps {
-        //         withCredentials([string(credentialsId: 'DEV_APP_URL', variable: 'DEV_APP_URL')]) {
-        //             sh 'for i in $(seq 1 10); do curl -sf $DEV_APP_URL/health && break || sleep 3; done'
-        //         }
-        //     }
-        // }
-
         // =====================================================================
-        // CD - test/staging: same shape as dev. This is the LAST build - the
-        // image produced here is the one that eventually reaches prod.
+        // CD - test/staging: NO build here. We promote the exact tag(s) that
+        // were built & validated on dev straight into test-values.yml, then
+        // run (simulated) DAST against the freshly-deployed test environment.
         // =====================================================================
-
-        stage('Build, Scan & Push - Front [test]') {
-            when { allOf { branch 'test'; not { changeRequest() }; expression { env.FRONT_CHANGED == 'true' } } }
-            agent { 
-                label "agent-1"
-                }
-            steps {
-                dir("${FRONT_DIR}") { sh "docker build -t ${FRONT_IMAGE}:${IMAGE_TAG} ." }
-                sh """
-                    mkdir -p ${WORKSPACE}/.trivy-cache
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v ${WORKSPACE}/.trivy-cache:/tmp/.cache -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
-                      aquasec/trivy:latest image --exit-code 1 --severity CRITICAL --format table ${FRONT_IMAGE}:${IMAGE_TAG} || true
-                """
-                withCredentials([usernamePassword(credentialsId: 'DOCKERHUB_CREDENTIALS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        docker push ${FRONT_IMAGE}:${IMAGE_TAG}
-                    """
-                }
-            }
-        }
-
-        stage('Build, Scan & Push - Back [test]') {
-            when { allOf { branch 'test'; not { changeRequest() }; expression { env.BACK_CHANGED == 'true' } } }
-            agent { 
-                label "agent-1"
-                }
-            steps {
-                dir("${BACK_DIR}") { sh "docker build -t ${BACK_IMAGE}:${IMAGE_TAG} ." }
-                sh """
-                    mkdir -p ${WORKSPACE}/.trivy-cache
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v ${WORKSPACE}/.trivy-cache:/tmp/.cache -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
-                      aquasec/trivy:latest image --exit-code 1 --severity CRITICAL --format table ${BACK_IMAGE}:${IMAGE_TAG} || true
-                """
-                withCredentials([usernamePassword(credentialsId: 'DOCKERHUB_CREDENTIALS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        docker push ${BACK_IMAGE}:${IMAGE_TAG}
-                    """
-                }
-            }
-        }
 
         stage('Promote tag -> test-values.yml') {
             when { allOf { branch 'test'; not { changeRequest() } } }
-            agent { 
-                label "agent-1"
-                }
+            agent { label "agent-1" }
             steps {
-                gitOpsBumpTag(env.TEST_VALUES)
+                script {
+                    echo "Reading image tag(s) already built & validated on dev from ${DEV_VALUES}, promoting into ${TEST_VALUES} (no rebuild)"
+                }
+                sh """
+                    docker run --rm -v \${WORKSPACE}:/w -w /w --entrypoint sh mikefarah/yq:latest -c '
+                        FRONT_TAG=\$(yq ".front-chart.image.tag" ${DEV_VALUES})
+                        BACK_TAG=\$(yq ".back-chart.image.tag" ${DEV_VALUES})
+                        yq -i ".front-chart.image.tag = \\"\$FRONT_TAG\\"" ${TEST_VALUES}
+                        yq -i ".back-chart.image.tag = \\"\$BACK_TAG\\"" ${TEST_VALUES}
+                    '
+                """
+                withCredentials([usernamePassword(credentialsId: 'GIT_REPO_CREDENTIALS', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh """
+                        git config user.email "jenkins-ci@pipeline"
+                        git config user.name "jenkins-ci"
+                        git add ${TEST_VALUES}
+                        git commit -m "promote dev image tag(s) -> ${TEST_VALUES} [ci skip]" || echo "nothing to commit"
+                        git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git test
+                        git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:test
+                    """
+                }
+                echo "test-values.yml updated. ArgoCD (auto-sync on test) will pick this up and deploy."
             }
         }
 
-        // stage('Smoke Test - Staging') {
-        //     when { allOf { branch 'test'; not { changeRequest() } } }
-        //     agent { label "agent-1" }
-        //     steps {
-        //         withCredentials([string(credentialsId: 'STAGING_APP_URL', variable: 'STAGING_APP_URL')]) {
-        //             sh 'for i in $(seq 1 10); do curl -sf $STAGING_APP_URL/health && break || sleep 3; done'
-        //         }
-        //     }
-        // }
+        // NOTE: these are SIMULATED DAST stages - there's no real ZAP/Nikto/Nuclei
+        // scanner wired in yet. They exist as placeholders so the pipeline shape
+        // is correct; swap the echo/sleep blocks for a real `docker run owasp/zap2docker-stable
+        // zap-baseline.py -t $TEST_APP_URL` (or similar) once you have real DAST tooling.
+        stage('Simulate DAST Scan - Front [test]') {
+            when { allOf { branch 'test'; not { changeRequest() } } }
+            agent { label "agent-1" }
+            steps {
+                sh '''
+                    echo "==================================================="
+                    echo " DAST Simulation Report - Front-end [test]"
+                    echo "==================================================="
+                    sleep 3
+                    echo "[INFO] Spidering target ..."
+                    sleep 2
+                    echo "[INFO] Passive scan rules executed: 42"
+                    echo "[INFO] Active scan rules executed: 15"
+                    echo "[PASS] No High risk alerts found (simulated)"
+                    echo "[WARN] 2 Medium risk alerts found (simulated) - missing security headers"
+                    echo "==================================================="
+                '''
+            }
+        }
+
+        stage('Simulate DAST Scan - Back [test]') {
+            when { allOf { branch 'test'; not { changeRequest() } } }
+            agent { label "agent-1" }
+            steps {
+                sh '''
+                    echo "==================================================="
+                    echo " DAST Simulation Report - Back-end API [test]"
+                    echo "==================================================="
+                    sleep 3
+                    echo "[INFO] Enumerating API endpoints ..."
+                    sleep 2
+                    echo "[INFO] Auth/session checks executed: 8"
+                    echo "[INFO] Injection checks executed: 20"
+                    echo "[PASS] No High/Critical risk alerts found (simulated)"
+                    echo "[WARN] 1 Low risk alert found (simulated) - verbose error messages"
+                    echo "==================================================="
+                '''
+            }
+        }
 
         // =====================================================================
         // CD - prod: merge to main. NO build, NO scan - promote the exact
-        // digest that was validated on test. ArgoCD prod app is manual-sync,
-        // so this stage only prepares the commit; a human clicks Sync.
+        // tag(s) that were validated on test, but only after a human approves.
+        // ArgoCD prod app is manual-sync, so this stage only prepares the
+        // commit; a human still clicks Sync in the ArgoCD UI afterwards.
         // =====================================================================
+
+        stage('Approval - Deploy to Production') {
+            when { allOf { branch 'main'; not { changeRequest() } } }
+            agent none
+            steps {
+                script {
+                    def decision = input(
+                        id: 'prodApproval',
+                        message: 'Promote the tested image tag(s) from test-values.yml to PRODUCTION (canary 10%)?',
+                        parameters: [choice(name: 'ACTION', choices: ['Approve', 'Abort'], description: 'Approve to proceed, Abort to stop the pipeline here')]
+                    )
+                    if (decision == 'Abort') {
+                        error("Production promotion aborted by approver.")
+                    }
+                }
+            }
+        }
 
         stage('Promote tag -> prod-values.yml') {
             when { allOf { branch 'main'; not { changeRequest() } } }
@@ -294,15 +297,13 @@ pipeline {
                         git config user.name "jenkins-ci"
                         git add ${PROD_VALUES}
                         git commit -m "promote ${IMAGE_TAG} from test to prod canary [ci skip]" || echo "nothing to commit"
-                        git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git main
-                        git push https://\$GIT_USER:\$GIT_TOKEN@github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git HEAD:main
+                        git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git main
+                        git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:main
                     """
                 }
                 echo "prod-values.yml updated with new canary tag/weights. Go to ArgoCD UI -> devops-app (prod) -> click Sync to apply."
             }
         }
-
-
 
     }
 
@@ -316,6 +317,7 @@ pipeline {
 // ---------------------------------------------------------------------------
 // Shared step: bump the built image tag(s) into the given env values file
 // and push the commit back to this same repo (ArgoCD watches it for changes).
+// Only used on dev, where FRONT_CHANGED/BACK_CHANGED reflect an actual build.
 // ---------------------------------------------------------------------------
 def gitOpsBumpTag(String valuesFile) {
     if (env.FRONT_CHANGED == 'true') {
@@ -336,7 +338,7 @@ def gitOpsBumpTag(String valuesFile) {
             git config user.name "jenkins-ci"
             git add ${valuesFile}
             git commit -m "build ${env.IMAGE_TAG} -> ${valuesFile} [ci skip]" || echo "nothing to commit"
-            git push https://\$GIT_USER:\$GIT_TOKEN@github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git HEAD:${env.BRANCH_NAME}
+            git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:${env.BRANCH_NAME}
         """
     }
 }
