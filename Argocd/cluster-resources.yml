@@ -9,7 +9,7 @@ spec:
   project: default 
 
   source: 
-    repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+    repoURL: https://github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git
     path: ./K8S/cluster-resources
 
     targetRevision: main  

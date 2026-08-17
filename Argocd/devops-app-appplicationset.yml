@@ -12,7 +12,7 @@ spec:
         elements:
           - name: prod-devops-app
             values_file: prod-values.yml
-            cluster_name: eks-prod
+            cluster_name: in-cluster
             namespace: 'devops-app'
             branch: main
             autosync: true
@@ -36,7 +36,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+        repoURL: https://github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git
         path: 'Helm/app-charts/devops-app'
         targetRevision: '{{.branch}}'
 

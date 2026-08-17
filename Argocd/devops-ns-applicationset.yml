@@ -10,7 +10,7 @@ spec:
           # - name: dev-cluster-ns
           #   cluster_name: kops-dev
           - name: prod-cluster-ns
-            cluster_name: eks-prod
+            cluster_name: in-cluster
 
 
   template:
@@ -21,7 +21,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/Youssef11gaber10/Cloud-Native-DevOps-Platform.git
+        repoURL: https://github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git
         path: ./K8S/devops-app
         targetRevision: main
       destination:
