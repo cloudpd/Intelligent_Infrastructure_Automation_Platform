@@ -9,6 +9,7 @@ const vmService = require('../vm/vm.service');
 const awsService = require('../../aws/aws.service');
 const terraformStateService = require('../terraform-state/terraformState.service');
 const { saveEcrUrlFromOutputs } = require('../terraform-state/terraformState.service');
+const terraformDeploymentService = require('../terraform-deployments/terraformDeployment.service');
 
 /**
  * The Terraform Setup Wizard (`/terraform/setup`) saves the S3 backend
@@ -357,6 +358,22 @@ async function applyVmFiles(req, res, next) {
       .then(async (outputs) => {
         // Persist the real ECR URL (includes AWS account ID) from Terraform outputs
         await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
+
+        // Snapshot exactly what was just applied so Destroy has something
+        // immutable to work from later, regardless of what a subsequent
+        // Generate does to `generated/<slug>/<env>/` afterward.
+        const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, prepared.resource.service_id);
+        await terraformDeploymentService.recordDeployment({
+          serviceId: prepared.resource.service_id,
+          environment,
+          serviceSlug,
+          outputDir,
+          stateBucket,
+          lockTable,
+          awsRegion: prepared.resource.region,
+          awsCredentialId,
+        });
+
         return vmService.markApplied(vmId, {
           instanceId: outputs.vm_instance_id?.value,
           publicIp: outputs.vm_public_ip?.value,
@@ -416,6 +433,22 @@ async function applyEksFiles(req, res, next) {
       .then(async (outputs) => {
         // Persist the real ECR URL (includes AWS account ID) from Terraform outputs
         await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
+
+        // Snapshot exactly what was just applied so Destroy has something
+        // immutable to work from later, regardless of what a subsequent
+        // Generate does to `generated/<slug>/<env>/` afterward.
+        const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, prepared.resource.service_id);
+        await terraformDeploymentService.recordDeployment({
+          serviceId: prepared.resource.service_id,
+          environment,
+          serviceSlug,
+          outputDir,
+          stateBucket,
+          lockTable,
+          awsRegion: prepared.resource.region,
+          awsCredentialId,
+        });
+
         return require('../EKS/eks.service').markApplied(clusterId, {
           clusterEndpoint: outputs.cluster_endpoint?.value,
           clusterName: outputs.cluster_name?.value,

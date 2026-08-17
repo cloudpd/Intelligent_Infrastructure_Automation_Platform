@@ -15,6 +15,7 @@ const infraVmRoutes = require('./modules/infra/vm/vm.routes');
 const infraTerraformRoutes = require('./modules/infra/terraform/terraform.routes');
 const awsRoutes = require('./modules/aws/aws.routes');
 const terraformStateRoutes = require('./modules/infra/terraform-state/terraformState.routes');
+const terraformDeploymentRoutes = require('./modules/infra/terraform-deployments/terraformDeployment.routes');
 
 const cors = require("cors") ;
 const app = express();
@@ -39,6 +40,7 @@ app.use('/infra/eks', infraEksRoutes);
 app.use('/infra/terraform', infraTerraformRoutes);
 app.use('/aws', awsRoutes);
 app.use('/infra/vm', infraVmRoutes);
+app.use('/infra/terraform-deployments', terraformDeploymentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

@@ -35,6 +35,7 @@ import KubernetesWizard from './Components/Kubernetes/KubernetesWizard.jsx';
 import CIServicePage from './Components/ci-service/CIServicePage.jsx';
 import TerraformSetupWizard from './Components/Terraform/TerraformSetupWizard.jsx';
 import TerraformConfiguration from './Components/Terraform/TerraformConfiguration.jsx';
+import ActiveProjectDetails from './Components/ActiveProjects/ActiveProjectDetails.jsx';
 
 
 
@@ -83,6 +84,12 @@ function App() {
           path: '/projects/:projectId', element:
             <ProtectedRoute>
               <ProjectDetails />
+            </ProtectedRoute>
+        },
+        {
+          path: '/active-projects/:deploymentId', element:
+            <ProtectedRoute>
+              <ActiveProjectDetails />
             </ProtectedRoute>
         },
         {

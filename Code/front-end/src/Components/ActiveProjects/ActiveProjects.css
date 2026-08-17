@@ -1,0 +1,151 @@
+.active-projects-panel {
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border-color-strong);
+  box-shadow: 0 24px 80px var(--shadow-color);
+}
+
+.active-projects-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.active-projects-panel__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.active-projects-panel__subtitle {
+  margin: 4px 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.active-projects-panel__refresh {
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-surface-soft);
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.active-projects-panel__refresh:hover {
+  border-color: var(--accent-soft-strong);
+  transform: rotate(90deg);
+}
+
+.active-projects-panel__state {
+  padding: 16px 4px;
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.active-projects-panel__state--error {
+  color: var(--danger);
+}
+
+.active-projects-panel__state button {
+  margin-top: 10px;
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-surface-soft);
+  color: var(--text-primary);
+  border-radius: var(--radius-xs);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.active-projects-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.active-project-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-soft);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.active-project-row:hover {
+  border-color: var(--accent-soft-strong);
+  transform: translateY(-1px);
+}
+
+.active-project-row__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.active-project-row__project {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-project-row__service {
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-project-status {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+.active-project-status--applied {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.active-project-status--destroying {
+  color: var(--accent-solid);
+  background: var(--accent-soft);
+}
+
+.active-project-status--destroy_failed {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+@media (max-width: 992px) {
+  .active-projects-panel {
+    width: 100%;
+  }
+}
