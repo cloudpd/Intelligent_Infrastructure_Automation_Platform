@@ -17,12 +17,12 @@ mysql: # this attribute are waiting for postgresql chart need him to start your 
 
 back-chart:
   image:
-    repository: "youssef11gaber10/gp-back"
-    tag: "dev-8bd08f5e"
+    repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-back"
+    tag: "latest"
 front-chart:
   image:
-    repository: "youssef11gaber10/gp-front"
-    tag: "dev-8bd08f5e"
+    repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-front"
+    tag: "latest"
 global:
   db_host: "mysql-svc" # here i set this in mysql chart and also read in backend 
   # db_port: "3306" # not changed so no need to override here 

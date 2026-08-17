@@ -56,9 +56,9 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
 
-          envFrom:
-            - configMapRef:
-                name: front-cm
+          # envFrom:
+          #   - configMapRef:
+          #       name: front-cm
 
           {{- with .Values.resources }}
 
