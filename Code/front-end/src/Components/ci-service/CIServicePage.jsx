@@ -16,7 +16,9 @@ export default function CIServicePage() {
     const [previewing, setPreviewing] = useState(false);
     const [pushingWorkflow, setPushingWorkflow] = useState(false);
     const [pushingSecrets, setPushingSecrets] = useState(false);
-    const [previewYaml, setPreviewYaml] = useState('');
+    const [previewCiYaml, setPreviewCiYaml] = useState('');
+    const [previewCdYaml, setPreviewCdYaml] = useState('');
+    const [activePreviewTab, setActivePreviewTab] = useState('ci');
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [ciConfigSaved, setCiConfigSaved] = useState(false);
     const [config, setConfig] = useState({
@@ -28,6 +30,7 @@ export default function CIServicePage() {
         enableLint: false,
         enableTests: false,
         enableBuild: false,
+        enableCD: false,
         awsEcrRegion: '',
     });
     // NOTE: no more shared "emptySecretState" constant with hardcoded
@@ -219,7 +222,12 @@ export default function CIServicePage() {
             const response = await fetch(`${API_URL}/services/${serviceId}/ci/preview`, { headers: authHeaders });
             const data = await response.json().catch(() => null);
             if (!response.ok) throw new Error(data?.message || 'Unable to preview workflow.');
-            setPreviewYaml(data?.workflow?.yaml || '');
+            
+            const wf = data?.workflow || {};
+            setPreviewCiYaml(wf.ciYaml || wf.yaml || '');
+            setPreviewCdYaml(wf.cdYaml || '');
+            setActivePreviewTab('ci');
+
             setStatusMessage('Workflow preview generated.');
             setShowPreviewModal(true);
         } catch (err) {
@@ -343,7 +351,27 @@ export default function CIServicePage() {
                 <div className='ci-modal-overlay' onClick={() => setShowPreviewModal(false)}>
                     <div className='ci-modal' onClick={(event) => event.stopPropagation()}>
                         <div className='ci-modal__header'>
-                            <h3 className='project-title'>Workflow preview</h3>
+                            <div>
+                                <h3 className='project-title'>Workflow Preview</h3>
+                                {previewCdYaml && (
+                                    <div className='ci-modal__tabs' style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                        <button
+                                            type='button'
+                                            className={`project-button ${activePreviewTab === 'ci' ? 'project-button--primary' : 'project-button--ghost'}`}
+                                            onClick={() => setActivePreviewTab('ci')}
+                                        >
+                                            CI (.github/workflows/ci.yml)
+                                        </button>
+                                        <button
+                                            type='button'
+                                            className={`project-button ${activePreviewTab === 'cd' ? 'project-button--primary' : 'project-button--ghost'}`}
+                                            onClick={() => setActivePreviewTab('cd')}
+                                        >
+                                            CD (.github/workflows/cd.yml)
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 type='button'
                                 className='ci-modal__close'
@@ -354,7 +382,9 @@ export default function CIServicePage() {
                             </button>
                         </div>
                         <div className='ci-modal__body'>
-                            <pre className='ci-preview'>{previewYaml}</pre>
+                            <pre className='ci-preview'>
+                                {activePreviewTab === 'cd' && previewCdYaml ? previewCdYaml : previewCiYaml}
+                            </pre>
                         </div>
                     </div>
                 </div>

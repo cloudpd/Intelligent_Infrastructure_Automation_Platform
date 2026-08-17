@@ -43,11 +43,17 @@ export default function CIForm({
           {fieldErrors.triggerBranch && <span className='ci-error'>{fieldErrors.triggerBranch}</span>}
         </label>
 
-        <label className={`ci-field ${fieldErrors.imageName ? 'ci-field--error' : ''}`}>
-          Image name
-          <input value={config.imageName} onChange={(event) => onConfigChange('imageName', event.target.value)} />
-          {fieldErrors.imageName && <span className='ci-error'>{fieldErrors.imageName}</span>}
-        </label>
+        {config.registry === 'docker-hub' ? (
+          <label className={`ci-field ${fieldErrors.imageName ? 'ci-field--error' : ''}`}>
+            Image name
+            <input value={config.imageName} onChange={(event) => onConfigChange('imageName', event.target.value)} />
+            {fieldErrors.imageName && <span className='ci-error'>{fieldErrors.imageName}</span>}
+          </label>
+        ) : (
+          <div className='ci-field ci-field--info' style={{ fontSize: '0.85rem', color: '#6b7280', margin: '8px 0' }}>
+            ℹ️ <strong>AWS ECR Repository URL</strong> is automatically resolved from your Terraform infrastructure.
+          </div>
+        )}
 
         <label className='ci-field ci-checkbox'>
           <input type='checkbox' checked={config.enableTrivy} onChange={(event) => onConfigChange('enableTrivy', event.target.checked)} />
@@ -67,6 +73,11 @@ export default function CIForm({
         <label className='ci-field ci-checkbox'>
           <input type='checkbox' checked={config.enableBuild} onChange={(event) => onConfigChange('enableBuild', event.target.checked)} />
           Enable build
+        </label>
+
+        <label className='ci-field ci-checkbox'>
+          <input type='checkbox' checked={config.enableCD} onChange={(event) => onConfigChange('enableCD', event.target.checked)} />
+          Enable Continuous Deployment (CD to EKS)
         </label>
 
         {saveError && <div className='ci-error-message'>{saveError}</div>}
