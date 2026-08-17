@@ -6,6 +6,7 @@ metadata:
 {{ include "back-chart.labels" . | nindent 4 }}
 data:
     PORT: "5000"
+    HOST: "0.0.0.0" # backend run on all interfaces
     DB_HOST: {{ .Values.global.db_host }}
     DB_PORT: "3306"
     DB_NAME: "infra_platform"
