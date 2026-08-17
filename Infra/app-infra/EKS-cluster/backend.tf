@@ -1,12 +1,10 @@
 terraform {
   backend "s3" {
-    bucket = "gp-ci-infra-state"
+    bucket = "gp-eks-cluster-state"
     key    = "terraform.tfstate"
     # key          = "dev/terraform.tfstate"#where you want save state file on bucket 
     # key          = "test/terraform.tfstate"
     # key          = "prod/terraform.tfstate"
-
-
 
     region       = "eu-north-1"
     profile      = "hafez-aws"
