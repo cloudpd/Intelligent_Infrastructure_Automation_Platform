@@ -15,7 +15,7 @@ spec:
     targetRevision: main  
 
   destination: # eks cluster
-    name: eks-prod
+    name: in-cluster
 
 
 

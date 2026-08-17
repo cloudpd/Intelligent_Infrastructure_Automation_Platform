@@ -8,8 +8,8 @@ spec:
 
   source: 
     repoURL: https://github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git
-    path: ./Argo-CD
-
+    path: ./Argocd
+    
     targetRevision: main  
 
   destination: 
