@@ -16,7 +16,7 @@ class CdWorkflowBuilder {
     this.config = {
       pipeline_name: `${baseName} - CD`,
       trigger_branch: rawConfig.trigger_branch || rawConfig.triggerBranch || 'main',
-      deploymentType: rawConfig.deploymentType || (rawConfig.eksClusterName ? 'eks' : 'vm'),
+      deploymentType: rawConfig.deploymentType || 'eks',
       eksClusterName: rawConfig.eksClusterName || null,
     };
   }
@@ -49,23 +49,19 @@ class CdWorkflowBuilder {
     const checkoutGen = new CheckoutStepGenerator();
     workflow.jobs.deploy.steps.push(checkoutGen.generate());
 
-    if (this.config.deploymentType === 'eks' || !this.config.deploymentType) {
-      // --- EKS CD DEPLOYMENT ---
-      workflow.jobs.deploy.steps.push({
-        name: 'Configure AWS Credentials',
-        uses: 'aws-actions/configure-aws-credentials@v4',
-        with: {
-          'aws-access-key-id': '${{ secrets.AWS_ACCESS_KEY_ID }}',
-          'aws-secret-access-key': '${{ secrets.AWS_SECRET_ACCESS_KEY }}',
-          'aws-region': '${{ secrets.AWS_REGION }}',
-        },
-      });
+    // --- EKS CD DEPLOYMENT ---
+    workflow.jobs.deploy.steps.push({
+      name: 'Configure AWS Credentials',
+      uses: 'aws-actions/configure-aws-credentials@v4',
+      with: {
+        'aws-access-key-id': '${{ secrets.AWS_ACCESS_KEY_ID }}',
+        'aws-secret-access-key': '${{ secrets.AWS_SECRET_ACCESS_KEY }}',
+        'aws-region': '${{ secrets.AWS_REGION }}',
+      },
+    });
 
-      const deployEksGen = new DeployEksGenerator(this.config.eksClusterName);
-      workflow.jobs.deploy.steps.push(...deployEksGen.generate());
-    } else if (this.config.deploymentType === 'vm') {
-      // --- VM CD DEPLOYMENT (Reserved for future UI task) ---
-    }
+    const deployEksGen = new DeployEksGenerator(this.config.eksClusterName);
+    workflow.jobs.deploy.steps.push(...deployEksGen.generate());
 
     return workflow;
   }

@@ -36,6 +36,7 @@ function validateCIConfigMiddleware(req, res, next) {
       enableLint,
       enableTests,
       enableBuild,
+      enableCD,
       awsEcrRegion,
     };
 

@@ -19,13 +19,12 @@ class DockerPushGenerator {
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
     const ecrRepoName = this.registryConfig.ecrRepoName;
 
-    // If ecrRepoName is the full URL from Terraform output, use it directly
     const isFullUrl = ecrRepoName && ecrRepoName.includes('amazonaws.com');
     const imageBase = isFullUrl
       ? ecrRepoName
       : ecrRepoName
         ? `${ecrRegistry}/${ecrRepoName}`
-        : `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}}`;
+        : `${ecrRegistry}/${'${{ secrets.ECR_REPOSITORY }}'}`;
 
     return {
       name: 'Push to AWS ECR',

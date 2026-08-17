@@ -3,7 +3,7 @@ const githubService = require('../github/github.service');
 const { validateRepository } = require('./ci.validation');
 const { CIConfig } = require('./ci.model');
 const AppError = require('../../core/utils/AppError');
-const { getEcrRepoNameFromDB } = require('./ci.service');
+const { getEcrRepoNameFromDB, getEksClusterNameFromDB } = require('./ci.service');
 
 async function getCIConfigController(req, res, next) {
     try {

@@ -26,7 +26,6 @@ class TrivyGenerator {
     const ecrRegistry = '${{ steps.login-ecr.outputs.registry }}';
     const ecrRepoName = this.registryConfig.ecrRepoName;
 
-    // If ecrRepoName is the full URL from Terraform output, use it directly
     const isFullUrl = ecrRepoName && ecrRepoName.includes('amazonaws.com');
     const imageBase = isFullUrl
       ? ecrRepoName
