@@ -3,7 +3,7 @@ const githubService = require('../github/github.service');
 const { validateRepository } = require('./ci.validation');
 const { CIConfig } = require('./ci.model');
 const AppError = require('../../core/utils/AppError');
-const { getEcrRepoNameFromDB } = require('./ci.service');
+const { getEcrRepoNameFromDB, getEksClusterNameFromDB } = require('./ci.service');
 
 async function getCIConfigController(req, res, next) {
     try {
@@ -31,6 +31,7 @@ async function getCIConfigController(req, res, next) {
                 enableLint: config.enable_lint,
                 enableTests: config.enable_tests,
                 enableBuild: config.enable_build,
+                enableCD: config.enable_cd,
             },
         });
     } catch (err) {
@@ -59,6 +60,7 @@ async function upsertCIConfigController(req, res, next) {
                 enable_lint: config.enableLint,
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
+                enable_cd: config.enableCD,
             },
         });
 
@@ -72,6 +74,7 @@ async function upsertCIConfigController(req, res, next) {
                 enable_lint: config.enableLint,
                 enable_tests: config.enableTests,
                 enable_build: config.enableBuild,
+                enable_cd: config.enableCD,
             });
         }
 
@@ -87,6 +90,7 @@ async function upsertCIConfigController(req, res, next) {
                 enableLint: ciConfig.enable_lint,
                 enableTests: ciConfig.enable_tests,
                 enableBuild: ciConfig.enable_build,
+                enableCD: ciConfig.enable_cd,
             },
         });
     } catch (err) {
@@ -117,6 +121,7 @@ async function previewWorkflowController(req, res, next) {
         const ecrRepoName = ciConfig.registry === 'aws-ecr'
             ? await getEcrRepoNameFromDB(serviceId)
             : null;
+        const eksClusterName = await getEksClusterNameFromDB(serviceId);
 
         // Build config object for generator
         const config = {
@@ -129,30 +134,28 @@ async function previewWorkflowController(req, res, next) {
             enableLint: ciConfig.enable_lint,
             enableTests: ciConfig.enable_tests,
             enableBuild: ciConfig.enable_build,
+            enableCD: ciConfig.enable_cd,
             language,
             ecrRepoName,
+            eksClusterName,
         };
 
 
-        const workflowYAML = ciService.generateWorkflowYAML(config);
+        const ciYaml = ciService.generateWorkflowYAML(config);
+        const cdYaml = config.enableCD ? ciService.generateCdWorkflowYAML(config) : null;
 
-        // Return preview and the expected workflow file path in the repository y2ma han3mlo download y2ma ntl3o yml file w khalas
         res.status(200).json({
             success: true,
             message: 'Workflow preview generated',
             workflow: {
-                yaml: workflowYAML,
+                yaml: ciYaml,
+                ciYaml,
+                cdYaml,
                 config,
-                filePath: '.github/workflows/deploy.yml',
+                filePath: ciService.CI_FILE_PATH || '.github/workflows/ci.yml',
+                cdFilePath: ciService.CD_FILE_PATH || '.github/workflows/cd.yml',
             },
         });
-        //     res.setHeader("Content-Type", "text/yaml");
-        //     res.setHeader(
-        //   "Content-Disposition",
-        //   'attachment; filename="deploy.yml"'
-        // );
-
-        // res.send(workflowYAML);
     } catch (err) {
         next(err);
     }

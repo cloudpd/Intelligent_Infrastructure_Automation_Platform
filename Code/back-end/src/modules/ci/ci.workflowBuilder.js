@@ -14,6 +14,7 @@ const TestNodeGenerator = require('./generators/test-node.generator');
 const TestPythonGenerator = require('./generators/test-python.generator');
 const BuildNodeGenerator = require('./generators/build-node.generator');
 const BuildPythonGenerator = require('./generators/build-python.generator');
+const DeployEksGenerator = require('./generators/deploy-eks.generator');
 
 /**
  * Workflow Builder
@@ -25,6 +26,7 @@ class WorkflowBuilder {
     const enableLint = rawConfig.enable_lint !== undefined ? rawConfig.enable_lint : (rawConfig.enableLint !== undefined ? rawConfig.enableLint : false);
     const enableTests = rawConfig.enable_tests !== undefined ? rawConfig.enable_tests : (rawConfig.enableTests !== undefined ? rawConfig.enableTests : false);
     const enableBuild = rawConfig.enable_build !== undefined ? rawConfig.enable_build : (rawConfig.enableBuild !== undefined ? rawConfig.enableBuild : false);
+    const enableCD = rawConfig.enable_cd !== undefined ? rawConfig.enable_cd : (rawConfig.enableCD !== undefined ? rawConfig.enableCD : false);
     const enableInstall = !!(enableLint || enableTests || enableBuild);
 
     this.config = {
@@ -37,9 +39,12 @@ class WorkflowBuilder {
       language: rawConfig.language || null,
       // ECR repo name from the Terraform-created ECR record (aws-ecr registry only)
       ecrRepoName: rawConfig.ecrRepoName || null,
+      // EKS Cluster name from the Terraform-created EKS record
+      eksClusterName: rawConfig.eksClusterName || null,
       enableLint,
       enableTests,
       enableBuild,
+      enableCD,
       enableInstall,
     };
   }
