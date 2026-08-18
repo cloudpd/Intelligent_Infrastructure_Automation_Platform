@@ -1,5 +1,6 @@
 const dockerizeService = require('./dockerize.service');
 const { getDefaultsForLanguage } = require('./dockerize.templates');
+const AppError = require('../../core/utils/AppError');
 
 async function markExistingController(req, res, next) {
   try {
@@ -51,13 +52,25 @@ async function suggestController(req, res, next) {
     const accessToken = await githubService.getDecryptedToken(req.user.id, github_token_id);
     const { owner, repo } = githubService.parseRepoUrl(service.repository_url);
 
-    const [packageJson, requirementsTxt] = await Promise.all([
-      githubService.getFileContent({ accessToken, owner, repo, path: 'package.json', branch: service.branch || 'main' }),
-      githubService.getFileContent({ accessToken, owner, repo, path: 'requirements.txt', branch: service.branch || 'main' }),
+    const branch = service.branch || 'main';
+    const [packageJson, requirementsTxt, pyprojectToml, pipfile, setupPy] = await Promise.all([
+      githubService.getFileContent({ accessToken, owner, repo, path: 'package.json', branch }),
+      githubService.getFileContent({ accessToken, owner, repo, path: 'requirements.txt', branch }),
+      githubService.getFileContent({ accessToken, owner, repo, path: 'pyproject.toml', branch }),
+      githubService.getFileContent({ accessToken, owner, repo, path: 'Pipfile', branch }),
+      githubService.getFileContent({ accessToken, owner, repo, path: 'setup.py', branch }),
     ]);
 
+    const fileList = [
+      packageJson && 'package.json',
+      requirementsTxt && 'requirements.txt',
+      pyprojectToml && 'pyproject.toml',
+      pipfile && 'Pipfile',
+      setupPy && 'setup.py',
+    ].filter(Boolean);
+
     const suggestion = await dockerizeAiService.suggestDockerConfig({
-      packageJson, requirementsTxt, fileList: [packageJson && 'package.json', requirementsTxt && 'requirements.txt'].filter(Boolean),
+      packageJson, requirementsTxt, pyprojectToml, pipfile, setupPy, fileList,
     });
 
     res.status(200).json({ success: true, suggestion }); // frontend pre-fills the form with this — nothing auto-applies
