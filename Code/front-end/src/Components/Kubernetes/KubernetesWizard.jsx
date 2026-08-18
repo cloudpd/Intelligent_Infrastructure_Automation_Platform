@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './KubernetesWizard.css';
 import '../Projects/Projects.css';
+import '../Terraform/Terraform.css';
 import { initialWizardState } from './k8sConstants';
 import WizardSummary from './WizardSummary';
 import {
@@ -15,6 +16,8 @@ import {
   StepAutoscaling,
 } from './WizardSteps';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
+import PipelineProgress from '../Shared/PipelineProgress';
 
 
 const STEPS = [
@@ -210,6 +213,15 @@ export default function KubernetesWizard() {
 
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        ...(projectId ? [{ label: 'Project', to: `/projects/${projectId}` }] : []),
+        { label: 'Kubernetes' },
+      ]} />
+
+      <PipelineProgress activeStage={5} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Kubernetes Deployment Wizard</h1>
@@ -219,9 +231,21 @@ export default function KubernetesWizard() {
           </p>
         </div>
         <Link to={`/projects/${projectId}`} className='project-button project-button--ghost'>
+          <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
           Back to project
         </Link>
       </header>
+
+      {/* GitHub token warning when none saved */}
+      {githubTokens.length === 0 && (
+        <div className='callout callout--warn' style={{ marginBottom: 'var(--space-4)' }}>
+          <i className='fa-solid fa-triangle-exclamation callout__icon' aria-hidden='true' />
+          <div className='callout__body'>
+            <strong>No GitHub tokens saved.</strong> You'll need one to push manifests.
+            {' '}<Link to='/github-tokens' className='auth-link' style={{ fontSize: 'inherit' }}>Add a token →</Link>
+          </div>
+        </div>
+      )}
 
       <div className='k8s-step-tracker'>
         {STEPS.map((step, index) => (
@@ -298,19 +322,35 @@ export default function KubernetesWizard() {
           {submitError && <div className='project-alert project-alert--error'>{submitError}</div>}
 
           {submitResult && (
-            <div className='project-alert project-alert--success k8s-result'>
-              <p>{submitResult.message}</p>
-              {submitResult.commitSha && (
-                <p className='k8s-result__meta'>
-                  Branch <code>{submitResult.branch}</code> · commit <code>{submitResult.commitSha.slice(0, 7)}</code>
-                </p>
-              )}
-              <ul className='k8s-result__files'>
-                {submitResult.generatedFiles?.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            </div>
+            <>
+              <div className='project-alert project-alert--success k8s-result'>
+                <p>{submitResult.message}</p>
+                {submitResult.commitSha && (
+                  <p className='k8s-result__meta'>
+                    Branch <code>{submitResult.branch}</code> · commit <code>{submitResult.commitSha.slice(0, 7)}</code>
+                  </p>
+                )}
+                <ul className='k8s-result__files'>
+                  {submitResult.generatedFiles?.map((f) => (
+                    <li key={f}>{f}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* 🎉 Pipeline complete! */}
+              <div className='next-step-cta' style={{ marginTop: 'var(--space-4)' }}>
+                <span className='next-step-cta__text'>
+                  <i className='fa-solid fa-party-horn' style={{ marginRight: '6px' }} aria-hidden='true' />
+                  Pipeline complete! Kubernetes manifests are live in your repo.
+                </span>
+                <Link
+                  to={projectId ? `/projects/${projectId}` : '/home'}
+                  className='project-button project-button--primary'
+                >
+                  Back to project <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
+                </Link>
+              </div>
+            </>
           )}
 
           {previewFiles && (

@@ -149,3 +149,46 @@
     width: 100%;
   }
 }
+
+/* ---- Pulse animation for 'destroying' status ---- */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.active-project-status--pulse {
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-project-status--pulse {
+    animation: none;
+  }
+}
+
+/* ---- Skeleton for active projects panel ---- */
+.active-projects-panel__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.active-projects-panel__skeleton-row {
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface-soft) 25%,
+    var(--bg-surface-hover) 50%,
+    var(--bg-surface-soft) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-projects-panel__skeleton-row {
+    animation: none;
+  }
+}

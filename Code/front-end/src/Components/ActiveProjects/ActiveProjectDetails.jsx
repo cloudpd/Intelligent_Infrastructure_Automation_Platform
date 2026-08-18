@@ -4,6 +4,7 @@ import './ActiveProjects.css';
 import './ActiveProjectDetails.css';
 import '../Projects/Projects.css';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
 
 const STATUS_LABEL = {
   applied: 'Live',
@@ -155,12 +156,21 @@ export default function ActiveProjectDetails() {
 
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Active Projects' },
+        ...(deployment ? [{ label: deployment.service?.name || 'Deployment' }] : []),
+      ]} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Active project</h1>
           <p className='projects-subtitle'>What is currently live, and where to tear it down.</p>
         </div>
-        <Link to='/home' className='project-button project-button--ghost'>Back to dashboard</Link>
+        <Link to='/home' className='project-button project-button--ghost'>
+          <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+          Back to dashboard
+        </Link>
       </header>
 
       {loading && (
@@ -197,7 +207,7 @@ export default function ActiveProjectDetails() {
                 {deployment.service?.project?.name || 'Untitled project'} · {deployment.environment}
               </p>
             </div>
-            <span className={`active-project-status active-project-status--${status}`}>
+            <span className={`active-project-status active-project-status--${status}${status === 'destroying' ? ' active-project-status--pulse' : ''}`}>
               {STATUS_LABEL[status] || status}
             </span>
           </div>

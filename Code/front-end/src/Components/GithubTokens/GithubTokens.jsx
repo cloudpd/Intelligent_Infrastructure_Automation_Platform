@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import '../Projects/Projects.css'; // reuse the same visual style as Projects
+import '../Projects/Projects.css';
+import '../Terraform/Terraform.css'; // callout classes
 import AddNewToken from './AddNewToken';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
 
 
 function TokenCard({ tokenData, onDelete }) {
@@ -86,12 +88,31 @@ export default function GithubTokens() {
 
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'GitHub Tokens' },
+      ]} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>GitHub Tokens</h1>
           <p className='projects-subtitle'>Save a token to let DeployHub push Dockerfiles and workflows to your repos.</p>
         </div>
       </header>
+
+      {/* Why do I need this? */}
+      <div className='callout callout--info' style={{ marginBottom: 'var(--space-5)' }}>
+        <i className='fa-solid fa-circle-info callout__icon' aria-hidden='true' />
+        <div className='callout__body'>
+          <strong>Why do I need a GitHub token?</strong>
+          <ul style={{ margin: 'var(--space-2) 0 0', paddingLeft: 'var(--space-4)' }}>
+            <li>Pushing generated <strong>Dockerfiles</strong> to your repo (step 3)</li>
+            <li>Pushing <strong>CI/CD workflow</strong> files to <code>.github/workflows/</code> (step 4)</li>
+            <li>Pushing <strong>Kubernetes manifests</strong> to your repo (step 5)</li>
+          </ul>
+          <p style={{ marginTop: 'var(--space-2)' }}>Create a PAT with <code>repo</code> and <code>workflow</code> scopes at GitHub → Settings → Developer settings.</p>
+        </div>
+      </div>
 
       <div className='projects-grid'>
         <AddNewToken onCreated={fetchTokens} />

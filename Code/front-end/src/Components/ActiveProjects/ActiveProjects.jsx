@@ -85,8 +85,10 @@ export default function ActiveProjects() {
       </div>
 
       {loading && (
-        <div className='active-projects-panel__state'>
-          <p>Loading active projects...</p>
+        <div className='active-projects-panel__skeleton' aria-hidden='true'>
+          {[1, 2].map((n) => (
+            <div key={n} className='active-projects-panel__skeleton-row' />
+          ))}
         </div>
       )}
 
