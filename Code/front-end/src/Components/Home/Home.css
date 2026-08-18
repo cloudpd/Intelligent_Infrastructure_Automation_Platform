@@ -47,7 +47,9 @@
   margin: 0;
   font-size: clamp(1.75rem, 2.4vw, 2.35rem);
   font-weight: 800;
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   letter-spacing: -0.02em;
 }
 
@@ -84,7 +86,14 @@
   border: 1px solid var(--border-color);
   text-decoration: none;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  overflow: hidden;
 }
+
+.metric-tile:nth-child(1) { border-top: 3px solid #60a5fa; }
+.metric-tile:nth-child(2) { border-top: 3px solid #34d399; }
+.metric-tile:nth-child(3) { border-top: 3px solid #c084fc; }
+.metric-tile:nth-child(4) { border-top: 3px solid #fbbf24; }
 
 .metric-tile--interactive:hover {
   transform: translateY(-2px);

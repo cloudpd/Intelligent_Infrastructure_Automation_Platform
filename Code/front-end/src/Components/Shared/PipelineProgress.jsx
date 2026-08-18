@@ -45,6 +45,7 @@ export default function PipelineProgress({ activeStage = 1, serviceId, projectId
           <React.Fragment key={stage.label}>
             {path ? (
               <Link
+                data-stage={stageNum}
                 to={path}
                 className={`pipeline-stage pipeline-stage--clickable ${stateClass}`}
                 role='listitem'
@@ -55,6 +56,7 @@ export default function PipelineProgress({ activeStage = 1, serviceId, projectId
               </Link>
             ) : (
               <div
+                data-stage={stageNum}
                 className={`pipeline-stage ${stateClass}`}
                 role='listitem'
                 aria-current={isActive ? 'step' : undefined}

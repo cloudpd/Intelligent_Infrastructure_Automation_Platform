@@ -42,7 +42,7 @@ export default function DockerizePage() {
         }
       })
       .catch((err) => console.error('Failed to fetch service details:', err));
-  }, [serviceId]);
+  }, [serviceId, navigate]);
 
   const ciPath = projectId
     ? `/projects/${projectId}/services/${serviceId}/ci`
@@ -131,32 +131,44 @@ export default function DockerizePage() {
         <div className='dockerize-choice'>
           <button
             type='button'
-            className='project-card dockerize-choice-card'
+            className='project-card dockerize-choice-card dockerize-choice-card--existing'
             onClick={() => setChoice('existing')}
           >
-            <div className='dockerize-choice-card__icon'>
-              <i className='fa-brands fa-docker' aria-hidden='true' />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
+              <div className='dockerize-choice-card__icon dockerize-choice-card__icon--cyan'>
+                <i className='fa-brands fa-docker' aria-hidden='true' />
+              </div>
+              <span className='dockerize-choice-tag dockerize-choice-tag--cyan'>Existing Spec</span>
             </div>
             <div>
-              <p className='project-title'>I already have a Dockerfile</p>
-              <p className='project-label'>Specify the path to an existing Dockerfile inside your repository.</p>
+              <h3 className='project-title' style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '6px' }}>I already have a Dockerfile</h3>
+              <p className='project-label' style={{ fontSize: '0.92rem', lineHeight: '1.5' }}>Specify the path to an existing Dockerfile inside your repository.</p>
             </div>
-            <i className='fa-solid fa-arrow-right dockerize-choice-card__arrow' aria-hidden='true' />
+            <div className='dockerize-choice-card__footer'>
+              <span>Configure Path</span>
+              <i className='fa-solid fa-arrow-right' aria-hidden='true' />
+            </div>
           </button>
 
           <button
             type='button'
-            className='project-card dockerize-choice-card'
+            className='project-card dockerize-choice-card dockerize-choice-card--generate'
             onClick={() => setChoice('generate')}
           >
-            <div className='dockerize-choice-card__icon'>
-              <i className='fa-solid fa-wand-magic-sparkles' aria-hidden='true' />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
+              <div className='dockerize-choice-card__icon dockerize-choice-card__icon--purple'>
+                <i className='fa-solid fa-wand-magic-sparkles' aria-hidden='true' />
+              </div>
+              <span className='dockerize-choice-tag dockerize-choice-tag--purple'>Automated Generator</span>
             </div>
             <div>
-              <p className='project-title'>Generate Dockerfile</p>
-              <p className='project-label'>Analyze your application stack and create an optimized Dockerfile.</p>
+              <h3 className='project-title' style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '6px' }}>Generate Dockerfile</h3>
+              <p className='project-label' style={{ fontSize: '0.92rem', lineHeight: '1.5' }}>Analyze your application stack and create an optimized Dockerfile.</p>
             </div>
-            <i className='fa-solid fa-arrow-right dockerize-choice-card__arrow' aria-hidden='true' />
+            <div className='dockerize-choice-card__footer'>
+              <span>Start Generator</span>
+              <i className='fa-solid fa-arrow-right' aria-hidden='true' />
+            </div>
           </button>
         </div>
       )}

@@ -82,7 +82,7 @@ export default function CIServicePage() {
             }
             loadService();
         }
-    }, [authHeaders, serviceId]);
+    }, [authHeaders, serviceId, navigate]);
 
     const clearFieldError = (field) => {
         setFieldErrors((prev) => {

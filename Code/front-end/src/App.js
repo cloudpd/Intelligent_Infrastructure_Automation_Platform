@@ -14,7 +14,8 @@ import Login from './Components/Login/Login.jsx';
 import Register from './Components/Register/Register.jsx';
 // import Brands from './Components/Brands/Brands';
 // import CartContextProvider from './Context/CartContext';
-// import Profile from './Components/Profile/Profile';
+import Profile from './Components/Profile/Profile.jsx';
+import LandingPage from './Components/LandingPage/LandingPage.jsx';
 import AuthProvider from './Context/AuthContext.jsx';
 import ThemeProvider from './Context/ThemeContext.jsx';
 import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute.jsx';
@@ -45,7 +46,7 @@ function App() {
     {
       path: '/', element: <Mainlayout />,
       children: [
-        { index: true, element: <Login /> },
+        { index: true, element: <LandingPage /> },
         {
           path: "/our-app", element:
             <ProtectedRoute>
@@ -181,7 +182,7 @@ function App() {
 
         // },
         // { path: '/cart', element: <ProtectedRoute ><Cart /> </ProtectedRoute> },
-        // { path: '/profile', element: <ProtectedRoute><Profile /></ProtectedRoute> },
+        { path: '/profile', element: <ProtectedRoute><Profile /></ProtectedRoute> },
         // { path: '/categories', element: <ProtectedRoute><Categories /></ProtectedRoute> },
         // { path: '/brands', element: <ProtectedRoute><Brands /></ProtectedRoute> },
         // { path: '/allorders', element: <ProtectedRoute><Allorders /></ProtectedRoute> },

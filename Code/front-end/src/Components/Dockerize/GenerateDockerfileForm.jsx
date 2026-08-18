@@ -1,10 +1,79 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
 
 const LANGUAGES = [
   { value: 'node', label: 'Node.js' },
   { value: 'python', label: 'Python' },
 ];
+
+function CustomTokenDropdown({ tokens, selectedId, onSelect }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const selectedToken = tokens.find((t) => String(t.id) === String(selectedId));
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className='custom-token-dropdown' ref={dropdownRef} style={{ position: 'relative', flex: 1 }}>
+      <input type='hidden' name='github_token_id' value={selectedId || ''} required />
+      <div
+        className={`custom-token-trigger ${isOpen ? 'custom-token-trigger--open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          <i className='fa-brands fa-github' style={{ color: '#38bdf8', fontSize: '1.2rem' }} />
+          <span style={{ color: selectedToken ? '#f8fafc' : '#94a3b8', fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {selectedToken ? selectedToken.name : 'Select a GitHub token...'}
+          </span>
+        </div>
+        <i className={`fa-solid fa-chevron-down custom-token-chevron ${isOpen ? 'custom-token-chevron--open' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className='custom-token-popover'>
+          <div className='custom-token-popover__header'>
+            <span>SAVED GITHUB TOKENS ({tokens.length})</span>
+          </div>
+          <div className='custom-token-popover__list'>
+            {tokens.map((t) => {
+              const isSelected = String(t.id) === String(selectedId);
+              return (
+                <div
+                  key={t.id}
+                  className={`custom-token-choice-item ${isSelected ? 'custom-token-choice-item--selected' : ''}`}
+                  onClick={() => {
+                    onSelect(t.id);
+                    setIsOpen(false);
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className='custom-token-choice-icon'>
+                      <i className='fa-brands fa-github' />
+                    </div>
+                    <div>
+                      <div className='custom-token-choice-title'>{t.name}</div>
+                      <div className='custom-token-choice-sub'>Personal Access Token</div>
+                    </div>
+                  </div>
+                  {isSelected && <i className='fa-solid fa-check' style={{ color: '#38bdf8', fontWeight: 900 }} />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
   // language is no longer chosen up front — it's inferred by the AI suggestion,
@@ -39,7 +108,13 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then((data) => setTokens(data.tokens || []))
+      .then((data) => {
+        const list = data.tokens || [];
+        setTokens(list);
+        if (list.length > 0) {
+          setGithubTokenId((prev) => prev || list[0].id);
+        }
+      })
       .catch((err) => console.error('Failed to fetch tokens:', err))
       .finally(() => setLoadingTokens(false));
   }
@@ -128,51 +203,56 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
       </p>
 
       <form className='add-project-form' onSubmit={handleSubmit}>
-        <label>
-          <div className='dockerize-token-label-row'>
+        <div className='dockerize-form-group' style={{ marginBottom: '16px' }}>
+          <div className='dockerize-token-label-row' style={{ marginBottom: '6px', fontWeight: '600', fontSize: '0.95rem' }}>
             <span>GitHub token to use</span>
           </div>
           {loadingTokens ? (
-            <p className='project-label'>Loading your tokens...</p>
+            <p className='project-label'>Loading your saved tokens...</p>
           ) : tokens.length === 0 ? (
-            <p className='project-alert project-alert--error'>
-              You have no saved GitHub tokens yet. Add one from the GitHub Tokens page first.
-            </p>
+            <div className='dockerize-no-tokens-box'>
+              <p className='project-alert project-alert--error' style={{ margin: 0 }}>
+                <i className='fa-solid fa-triangle-exclamation' />
+                No GitHub Access Tokens found. Save a token to analyze your repos.
+              </p>
+              <a href='/github-tokens' target='_blank' rel='noopener noreferrer' className='project-button project-button--primary mt-2' style={{ width: 'fit-content' }}>
+                <i className='fa-solid fa-key' /> Manage GitHub Tokens
+              </a>
+            </div>
           ) : (
-            <div className='dockerize-token-controls'>
-              <select value={githubTokenId} onChange={(e) => setGithubTokenId(e.target.value)} required>
-                <option value=''>Select a token...</option>
-                {tokens.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+            <div className='dockerize-select-wrapper' style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', marginBottom: '8px' }}>
+              <CustomTokenDropdown tokens={tokens} selectedId={githubTokenId} onSelect={setGithubTokenId} />
               <button
                 type='button'
                 className='dockerize-reload-btn'
                 title='Refresh token list'
                 onClick={fetchTokens}
+                style={{ height: '50px', width: '50px', flexShrink: 0, borderRadius: 'var(--radius-md)' }}
               >
-                <i className='fa-solid fa-rotate'></i>
+                <i className='fa-solid fa-rotate' />
               </button>
             </div>
           )}
-          <div>
-            <a href='/github-tokens' target='_blank' rel='noopener noreferrer'>
-              Create One?
+          <div style={{ marginTop: '4px' }}>
+            <a href='/github-tokens' target='_blank' rel='noopener noreferrer' style={{ color: '#38bdf8', fontSize: '0.85rem', textDecoration: 'none', fontWeight: '600' }}>
+              + Create or Manage Tokens
             </a>
           </div>
-        </label>
+        </div>
 
         <div className='dockerize-suggest-panel'>
-          <div className='dockerize-suggest-copy'>
-            <strong>Not sure what to enter?</strong>
-            <span>
-              {hasSuggested
-                ? 'Suggested from your repo — review and edit anything below.'
-                : "We'll read your repo and fill in the fields below."}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className='dockerize-suggest-badge'>
+              <i className='fa-solid fa-wand-magic-sparkles' />
+            </div>
+            <div className='dockerize-suggest-copy'>
+              <strong>Analyze repository with AI</strong>
+              <span>
+                {hasSuggested
+                  ? 'Suggested from your repo — review and edit anything below.'
+                  : "We'll read your repo structure and auto-fill your container settings."}
+              </span>
+            </div>
           </div>
           <button
             type='button'
@@ -182,7 +262,7 @@ export default function GenerateDockerfileForm({ serviceId, onBack, onDone }) {
             title={!githubTokenId ? 'Select a GitHub token first' : undefined}
           >
             <i className={`fa-solid ${suggesting ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-            {suggesting ? 'Analyzing your repo...' : hasSuggested ? 'Re-analyze repo' : 'Suggest with AI'}
+            {suggesting ? 'Analyzing Repo...' : hasSuggested ? 'Re-analyze Repo' : 'Auto-Fill with AI'}
           </button>
         </div>
 

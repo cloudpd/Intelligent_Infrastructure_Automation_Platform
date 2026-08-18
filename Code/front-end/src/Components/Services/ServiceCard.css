@@ -34,13 +34,13 @@
   width: 42px;
   height: 42px;
   border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-soft-strong);
-  color: var(--accent-2);
+  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  color: #ffffff;
   display: grid;
   place-items: center;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
 }
 
 .service-title {
@@ -122,6 +122,12 @@
   color: #ffffff;
   box-shadow: 0 0 12px var(--accent-soft-strong);
 }
+
+.track-dot:nth-child(1).track-dot--active { background: var(--stage-1-gradient); box-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+.track-dot:nth-child(3).track-dot--active { background: var(--stage-2-gradient); box-shadow: 0 0 12px rgba(129, 140, 248, 0.6); }
+.track-dot:nth-child(5).track-dot--active { background: var(--stage-3-gradient); box-shadow: 0 0 12px rgba(192, 132, 252, 0.6); }
+.track-dot:nth-child(7).track-dot--active { background: var(--stage-4-gradient); box-shadow: 0 0 12px rgba(244, 114, 182, 0.6); }
+.track-dot:nth-child(9).track-dot--active { background: var(--stage-5-gradient); box-shadow: 0 0 12px rgba(52, 211, 153, 0.6); }
 
 .track-dot--locked {
   background: var(--bg-surface-soft);

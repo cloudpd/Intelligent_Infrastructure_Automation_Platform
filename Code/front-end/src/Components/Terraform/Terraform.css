@@ -5,14 +5,19 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color-strong);
   background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  border-top: 3px solid #38bdf8;
 }
 
 .terraform-step-title {
   margin-top: 0;
   margin-bottom: var(--space-1);
   font-size: var(--font-lg);
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 800;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .terraform-field-label {

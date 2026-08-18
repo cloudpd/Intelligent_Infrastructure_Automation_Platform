@@ -20,20 +20,20 @@
   --font-xl: 2rem;
   --font-kpi: 2.38rem;
 
-  --bg-page: #020617;
-  --bg-sidebar: #0b0f19;
-  --bg-surface: rgba(15, 23, 42, 0.82);
-  --bg-surface-strong: rgba(15, 23, 42, 0.92);
-  --bg-surface-soft: rgba(255, 255, 255, 0.04);
-  --bg-surface-hover: rgba(255, 255, 255, 0.06);
-  --bg-input: rgba(15, 23, 42, 0.72);
-  --bg-code: #0d1117;
-  --bg-modal-backdrop: rgba(2, 6, 23, 0.68);
-  --bg-modal: rgba(8, 15, 32, 0.97);
+  --bg-page: #070a14;
+  --bg-sidebar: #0d1322;
+  --bg-surface: rgba(20, 29, 51, 0.75);
+  --bg-surface-strong: rgba(22, 33, 58, 0.92);
+  --bg-surface-soft: rgba(255, 255, 255, 0.06);
+  --bg-surface-hover: rgba(255, 255, 255, 0.1);
+  --bg-input: rgba(13, 20, 36, 0.8);
+  --bg-code: #0b101d;
+  --bg-modal-backdrop: rgba(2, 6, 23, 0.75);
+  --bg-modal: rgba(15, 23, 42, 0.98);
 
-  --border-color: rgba(148, 163, 184, 0.14);
-  --border-color-strong: rgba(148, 163, 184, 0.24);
-  --sidebar-border: rgba(148, 163, 184, 0.12);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-color-strong: rgba(255, 255, 255, 0.22);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
 
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
@@ -71,8 +71,19 @@
   --space-8: 64px;
 
   /* ---- Pipeline & breadcrumb semantic tokens ---- */
-  --pipeline-done-bg: rgba(74, 222, 128, 0.14);
-  --pipeline-done-border: rgba(74, 222, 128, 0.3);
+  --stage-1-color: #38bdf8;
+  --stage-1-gradient: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  --stage-2-color: #818cf8;
+  --stage-2-gradient: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+  --stage-3-color: #c084fc;
+  --stage-3-gradient: linear-gradient(135deg, #9333ea 0%, #c084fc 100%);
+  --stage-4-color: #f472b6;
+  --stage-4-gradient: linear-gradient(135deg, #db2777 0%, #f472b6 100%);
+  --stage-5-color: #34d399;
+  --stage-5-gradient: linear-gradient(135deg, #059669 0%, #34d399 100%);
+
+  --pipeline-done-bg: rgba(52, 211, 153, 0.16);
+  --pipeline-done-border: rgba(52, 211, 153, 0.35);
   --pipeline-active-bg: rgba(99, 102, 241, 0.18);
   --pipeline-active-border: rgba(99, 102, 241, 0.5);
   --pipeline-idle-bg: rgba(148, 163, 184, 0.07);
