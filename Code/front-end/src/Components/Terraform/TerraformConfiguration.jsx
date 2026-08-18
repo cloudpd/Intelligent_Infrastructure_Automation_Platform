@@ -9,6 +9,8 @@ import VmDeploymentForm from './components/VmDeploymentForm';
 import EksClusterForm from './components/EksClusterForm';
 import TerraformActions from './components/TerraformActions';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
+import PipelineProgress from '../Shared/PipelineProgress';
 
 
 export default function TerraformConfiguration() {
@@ -510,6 +512,14 @@ export default function TerraformConfiguration() {
 
   return (
     <div className='projects-shell min-vh-100'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        { label: 'Terraform Configuration' },
+      ]} />
+
+      <PipelineProgress activeStage={2} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Terraform Configuration</h1>
@@ -517,6 +527,7 @@ export default function TerraformConfiguration() {
         </div>
         <div>
           <Link to={`/services/${serviceId}/terraform-setup`} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
             Back to setup
           </Link>
         </div>
@@ -578,6 +589,22 @@ export default function TerraformConfiguration() {
             onGenerate={handleGenerate}
             onApply={handleApply}
           />
+
+          {/* Next-step CTA after successful apply */}
+          {applyPhase === 'completed' && (
+            <div className='next-step-cta'>
+              <span className='next-step-cta__text'>
+                <i className='fa-solid fa-circle-check' style={{ marginRight: '6px' }} aria-hidden='true' />
+                Infrastructure is live! Next: set up your Dockerfile.
+              </span>
+              <Link
+                to={`/services/${serviceId}/dockerize`}
+                className='project-button project-button--primary'
+              >
+                Dockerize <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
