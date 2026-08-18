@@ -107,6 +107,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border-color);
+  text-align: left !important;
 }
 
 .enterprise-table td {
@@ -114,6 +115,7 @@
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
   vertical-align: middle;
+  text-align: left !important;
 }
 
 .enterprise-table tr:last-child td {

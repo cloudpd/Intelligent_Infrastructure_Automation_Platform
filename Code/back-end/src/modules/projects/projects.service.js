@@ -1,5 +1,6 @@
 const { Project } = require('./projects.model');
 const { User } = require('../auth/auth.model');
+const { Service } = require('../service/service.model');
 const AppError = require('../../core/utils/AppError');
 
 
@@ -23,7 +24,10 @@ async function createProject(userId, projectData) {
 
 async function getProjectById(projectId, userId) {
   const project = await Project.findByPk(projectId, {
-    include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email'] },
+      { model: Service, as: 'services' },
+    ],
   });
 
   if (!project) {
@@ -42,7 +46,10 @@ async function getProjectById(projectId, userId) {
 async function getUserProjects(userId) {
   const projects = await Project.findAll({
     where: { owner_id: userId },
-    include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email'] },
+      { model: Service, as: 'services' },
+    ],
     order: [['createdAt', 'DESC']],
   });
 

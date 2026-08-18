@@ -10,9 +10,11 @@ const STATUS_LABEL = {
 };
 
 function DeploymentRow({ deployment }) {
-  const projectName = deployment.service?.project?.name || 'Untitled project';
-  const serviceName = deployment.service?.name || 'Untitled service';
+  const projectName = deployment.service?.project?.name || 'Project';
+  const serviceName = deployment.service?.name || 'Service';
   const status = deployment.status || 'applied';
+  const env = deployment.environment || 'production';
+  const infraType = deployment.eksConfig ? 'AWS EKS Cluster' : 'AWS EC2 VM';
 
   return (
     <Link
@@ -22,8 +24,8 @@ function DeploymentRow({ deployment }) {
       <div className='active-project-row__left'>
         <span className={`active-project-dot active-project-dot--${status}`} />
         <div className='active-project-row__main'>
-          <span className='active-project-row__project'>{projectName}</span>
-          <span className='active-project-row__service'>{serviceName} · {deployment.environment}</span>
+          <span className='active-project-row__project'>{projectName} / <strong>{serviceName}</strong></span>
+          <span className='active-project-row__service'>{infraType} · {env}</span>
         </div>
       </div>
 

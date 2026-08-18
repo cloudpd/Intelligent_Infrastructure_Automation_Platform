@@ -10,11 +10,18 @@ export default function ServiceCard({ service, projectId }) {
   let repoDisplay = service.repository_url || '';
   repoDisplay = repoDisplay.replace(/^https?:\/\/github\.com\//, '') || '—';
 
-  // Logical stage detection (can be expanded based on service state)
-  const isTerraformSetupDone = Boolean(service.terraform_setup_complete || service.vpc_id || service.aws_credential_id);
-  const isTerraformApplied = Boolean(service.terraform_applied || service.status === 'applied');
-  const isDockerized = Boolean(service.dockerfile_path || service.dockerfile_complete);
-  const isCiDone = Boolean(service.ci_pushed);
+  let savedStage = 0;
+  try {
+    const stored = localStorage.getItem(`service_stage_${id}`);
+    if (stored) savedStage = parseInt(stored, 10) || 0;
+  } catch (e) {}
+
+  // Logical stage detection (backed by persistent stage state & backend flags)
+  const isTerraformSetupDone = Boolean(service.terraform_setup_complete || service.vpc_id || service.aws_credential_id || savedStage >= 1);
+  const isTerraformApplied = Boolean(service.terraform_applied || service.status === 'applied' || savedStage >= 2);
+  const isDockerized = Boolean(service.dockerfile_path || service.dockerfile_complete || savedStage >= 3);
+  const isCiDone = Boolean(service.ci_pushed || savedStage >= 4);
+  const isK8sDone = Boolean(service.k8s_applied || service.status === 'deployed' || savedStage >= 5);
 
   // Determine current logical next action
   let primaryAction = {
@@ -24,28 +31,35 @@ export default function ServiceCard({ service, projectId }) {
     stageName: 'Step 1: Terraform Setup',
   };
 
-  if (isCiDone) {
+  if (isK8sDone || savedStage === 5) {
+    primaryAction = {
+      label: 'Manage Kubernetes',
+      to: projectId ? `/projects/${projectId}/services/${id}/k8s` : `/services/${id}/k8s`,
+      icon: 'fa-solid fa-dharmachakra',
+      stageName: 'Step 5: Kubernetes Deployed',
+    };
+  } else if (isCiDone || savedStage === 4) {
     primaryAction = {
       label: 'Configure Kubernetes',
       to: projectId ? `/projects/${projectId}/services/${id}/k8s` : `/services/${id}/k8s`,
       icon: 'fa-solid fa-dharmachakra',
       stageName: 'Step 5: Kubernetes',
     };
-  } else if (isDockerized) {
+  } else if (isDockerized || savedStage === 3) {
     primaryAction = {
       label: 'Set up CI Pipeline',
       to: projectId ? `/projects/${projectId}/services/${id}/ci` : `/services/${id}/ci`,
       icon: 'fa-solid fa-rotate',
       stageName: 'Step 4: CI Pipeline',
     };
-  } else if (isTerraformApplied) {
+  } else if (isTerraformApplied || savedStage === 2) {
     primaryAction = {
       label: 'Dockerize Service',
       to: `/services/${id}/dockerize`,
       icon: 'fa-brands fa-docker',
       stageName: 'Step 3: Dockerize',
     };
-  } else if (isTerraformSetupDone) {
+  } else if (isTerraformSetupDone || savedStage === 1) {
     primaryAction = {
       label: 'Configure & Apply Terraform',
       to: `/services/${id}/terraform-configuration`,

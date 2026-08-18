@@ -48,16 +48,36 @@ export default function Projects() {
     setError(null);
 
     const token = localStorage.getItem('token');
-    const url = `${API_URL}/projects/list`;
+    const headers = { Authorization: `Bearer ${token}` };
 
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.projects || [];
-        setProjects(list);
+    Promise.all([
+      fetch(`${API_URL}/projects/list`, { headers })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+      fetch(`${API_URL}/services/list-all`, { headers })
+        .then((r) => (r.ok ? r.json() : { services: [] }))
+        .catch(() => ({ services: [] })),
+    ])
+      .then(([projectsData, servicesData]) => {
+        const rawProjects = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
+        const rawServices = Array.isArray(servicesData) ? servicesData : servicesData.services || [];
+
+        const enriched = rawProjects.map((proj) => {
+          const pId = proj.id || proj._id;
+          const matchingServices = rawServices.filter(
+            (s) => String(s.project_id) === String(pId) || String(s.project?.id) === String(pId)
+          );
+          const existingServices = Array.isArray(proj.services) ? proj.services : [];
+          const combinedServices = matchingServices.length > 0 ? matchingServices : existingServices;
+
+          return {
+            ...proj,
+            services: combinedServices,
+            serviceCount: combinedServices.length,
+          };
+        });
+
+        setProjects(enriched);
       })
       .catch((err) => {
         console.error('Failed to fetch projects:', err);

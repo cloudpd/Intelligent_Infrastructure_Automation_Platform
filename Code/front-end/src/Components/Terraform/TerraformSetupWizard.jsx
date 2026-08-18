@@ -310,6 +310,9 @@ export default function TerraformSetupWizard() {
       if (!res.ok) {
         throw new Error(data?.message || `Request failed with status ${res.status}`);
       }
+      if (serviceId) {
+        localStorage.setItem(`service_stage_${serviceId}`, '1');
+      }
       navigate(`/services/${serviceId}/terraform-configuration`);
     } catch (err) {
       setError(err.message || 'Could not save Terraform setup.');

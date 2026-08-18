@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import './KubernetesWizard.css';
 import '../Projects/Projects.css';
 import '../Terraform/Terraform.css';
@@ -33,6 +33,7 @@ const STEPS = [
 
 export default function KubernetesWizard() {
   const { projectId, serviceId } = useParams();
+  const navigate = useNavigate();
 
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,11 @@ export default function KubernetesWizard() {
 
   useEffect(() => {
     if (!serviceId) return;
+    const currentStage = parseInt(localStorage.getItem(`service_stage_${serviceId}`) || '0', 10);
+    if (currentStage < 4) {
+      navigate(projectId ? `/projects/${projectId}/services/${serviceId}/ci` : `/services/${serviceId}/ci`, { replace: true });
+      return;
+    }
     setLoading(true);
     setLoadError(null);
 
@@ -182,6 +188,9 @@ export default function KubernetesWizard() {
     try {
       const result = await callGenerate(false);
       setSubmitResult(result);
+      if (serviceId) {
+        localStorage.setItem(`service_stage_${serviceId}`, '5');
+      }
     } catch (err) {
       setSubmitError(err.message || 'Could not generate Kubernetes manifests.');
     } finally {

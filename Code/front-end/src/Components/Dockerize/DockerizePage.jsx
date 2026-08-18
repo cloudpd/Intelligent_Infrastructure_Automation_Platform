@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './Dockerize.css';
 import ExistingDockerfileForm from './ExistingDockerfileForm';
@@ -10,6 +10,7 @@ import { baseUrl as API_URL } from '../Shared/baseUrl';
 
 export default function DockerizePage() {
   const { serviceId } = useParams();
+  const navigate = useNavigate();
   const [choice, setChoice] = useState(null); // null | 'existing' | 'generate'
   const [completed, setCompleted] = useState(false);
   const [service, setService] = useState(null);
@@ -17,6 +18,13 @@ export default function DockerizePage() {
 
   useEffect(() => {
     if (!serviceId) return;
+
+    const currentStage = parseInt(localStorage.getItem(`service_stage_${serviceId}`) || '0', 10);
+    if (currentStage < 2) {
+      navigate(currentStage === 0 ? `/services/${serviceId}/terraform-setup` : `/services/${serviceId}/terraform-configuration`, { replace: true });
+      return;
+    }
+
     const token = localStorage.getItem('token');
     fetch(`${API_URL}/services/get/${serviceId}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -42,6 +50,13 @@ export default function DockerizePage() {
 
   const projectName = service?.project?.name || 'Project';
   const serviceName = service?.name || 'Service';
+
+  const handleCompleted = () => {
+    if (serviceId) {
+      localStorage.setItem(`service_stage_${serviceId}`, '3');
+    }
+    setCompleted(true);
+  };
 
   if (completed) {
     return (
@@ -150,7 +165,7 @@ export default function DockerizePage() {
         <ExistingDockerfileForm
           serviceId={serviceId}
           onBack={() => setChoice(null)}
-          onDone={() => setCompleted(true)}
+          onDone={handleCompleted}
         />
       )}
 
@@ -158,7 +173,7 @@ export default function DockerizePage() {
         <GenerateDockerfileForm
           serviceId={serviceId}
           onBack={() => setChoice(null)}
-          onDone={() => setCompleted(true)}
+          onDone={handleCompleted}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './ci-service.css';
 import SecretForm from './SecretForm';
@@ -11,6 +11,7 @@ import PipelineProgress from '../Shared/PipelineProgress';
 
 export default function CIServicePage() {
     const { projectId, serviceId } = useParams();
+    const navigate = useNavigate();
     const [service, setService] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -74,6 +75,11 @@ export default function CIServicePage() {
         }
 
         if (serviceId) {
+            const currentStage = parseInt(localStorage.getItem(`service_stage_${serviceId}`) || '0', 10);
+            if (currentStage < 3) {
+                navigate(`/services/${serviceId}/dockerize`, { replace: true });
+                return;
+            }
             loadService();
         }
     }, [authHeaders, serviceId]);
@@ -255,6 +261,9 @@ export default function CIServicePage() {
             console.log(data);
             if (!response.ok) throw new Error(data?.message || 'Unable to push workflow.');
             setStatusMessage('Workflow pushed to GitHub.');
+            if (serviceId) {
+                localStorage.setItem(`service_stage_${serviceId}`, '4');
+            }
         } catch (err) {
             setError(err.message || 'Unable to push workflow.');
         } finally {
