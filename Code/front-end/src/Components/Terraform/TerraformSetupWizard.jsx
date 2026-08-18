@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './Terraform.css';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
 import Breadcrumb from '../Shared/Breadcrumb';
-import PipelineProgress from '../Shared/PipelineProgress';
 
 
 export default function TerraformSetupWizard() {
@@ -334,11 +333,16 @@ export default function TerraformSetupWizard() {
         { label: 'Terraform Setup' },
       ]} />
 
-      <PipelineProgress activeStage={1} />
-
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Terraform Setup Wizard</h1>
+          <p className='projects-subtitle'>Step {step} of 4 — {STEP_LABELS[step - 1]}</p>
+        </div>
+        <div>
+          <Link to={-1} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back
+          </Link>
         </div>
       </header>
 

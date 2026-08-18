@@ -1,213 +1,930 @@
 ---
-name: ui-enhancement
-description: Use this skill whenever creating, redesigning, or polishing any screen, component, modal, wizard step, card, form, or state (loading/empty/error) in the SkyOps front-end (Code/front-end). Trigger on requests like "improve this UI", "make this page look better", "design a new component", "add a modal/wizard/form", or "fix the styling/spacing/responsiveness" of any page. Do NOT use for backend, Jenkins/Argo/Helm/K8s manifest work, or non-visual logic changes.
+
+name: intelligent-infrastructure-ui
+description: Expert product UI/UX and frontend design skill for transforming the Intelligent Infrastructure Automation Platform into a premium, visually striking, intuitive, business-ready cloud and DevOps product. Use whenever working on frontend styling, layouts, dashboards, navigation, components, pages, animations, visual hierarchy, responsiveness, or overall product experience.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Intelligent Infrastructure Automation Platform
+
+# Premium Product UI/UX Expert
+
+## ROLE
+
+You are not simply a frontend developer.
+
+You are simultaneously:
+
+* Senior Product Designer
+* Senior UI/UX Designer
+* Frontend Engineer
+* Design Systems Engineer
+* SaaS Product Designer
+* Data Visualization Designer
+* DevOps/Cloud Product UX Specialist
+
+Your job is to transform this application from a functional technical project into something that looks and feels like a **real commercial cloud infrastructure product**.
+
+The final interface should be something that could realistically be presented to:
+
+* a customer
+* a CTO
+* a DevOps engineer
+* an infrastructure team
+* a startup investor
+* a technical interviewer
+* an enterprise engineering organization
+
 ---
 
-# SkyOps UI Enhancement
+# CORE OBJECTIVE
 
-## What this project is
-SkyOps is a React 18 (CRA) infrastructure-automation dashboard. Plain CSS + CSS
-custom properties are used as the design system (no Tailwind, no MUI). Bootstrap
-is installed but is legacy — do not reach for Bootstrap classes in new/updated
-UI; follow the token system below instead. Routing is `react-router-dom` v6.
+The most important objective is:
 
-**User journey the UI must support end-to-end** (keep this mental model when
-touching any screen — it tells you what state a page can be in and what should
-come before/after it):
+> Make the application visually impressive, extremely easy to understand, highly usable, and commercially believable.
 
-1. **Register** (`/register`) → account created → redirect to `/login`
-2. **Login** (`/login`) → stores token → redirect to `/home`. "Forgot password" →
-   **Account Recovery** (`/account-recovery`)
-3. **Home** (`/home`) → dashboard: hero + stat cards + **Active Projects** side panel
-4. **Projects** (`/projects`) → list + "Add new project" card/modal
-5. **Project Details** (`/projects/:projectId`) → project info + **Services** grid
-   + "Add service" modal (name, repo URL, branch)
-6. Each **Service card** → "Go through the deployment process" →
-   **Terraform Setup Wizard** (`/services/:serviceId/terraform-setup`) — pick
-   deployment type (EKS cluster vs VM), fill the matching form
-7. → **Terraform Configuration** (`/services/:serviceId/terraform-configuration`)
-   — backend summary, Init/Plan/Apply actions, live apply-status card
-8. → **Dockerize** (`/services/:serviceId/dockerize`) — "I have a Dockerfile"
-   vs "generate one for me" (uses a connected GitHub token)
-9. → **CI Service** (`/projects/:projectId/services/:serviceId/ci`) — generate,
-   preview, push `.github/workflows/ci.yml`, manage secrets
-10. → **Kubernetes Wizard** (`/projects/:projectId/services/:serviceId/k8s`) —
-    multi-step form (namespaces, resources, service accounts, env vars) →
-    summary → generate & push manifests
-11. **Active Projects / Active Project Details** (`/active-projects/:deploymentId`)
-    — live deployment status (applied / destroying / destroy_failed)
-12. **GitHub Tokens** (`/github-tokens`) — manage PATs used by steps 8–10,
-    reachable any time from the navbar
+Do not merely "clean up" the existing UI.
 
-Every authenticated page sits inside `Mainlayout` behind `ProtectedRoute` and
-shares the same navbar/shell — new pages must reuse `Mainlayout`, not invent a
-new shell.
+If the current UI is visually weak, redesign it.
 
-## The professional bar — what separates "basic" from "business-grade"
-Apply these rules to every screen you touch, not just new ones. This is what
-turns generic-looking CRUD screens into something that reads like a real SaaS
-product (think: Linear, Vercel, Stripe dashboard, Datadog):
+If the current layout is boring, create a stronger hierarchy.
 
-1. **Real visual hierarchy, not uniform boxes.** Every screen needs one clear
-   focal point (biggest/boldest element) and everything else recedes. Don't
-   let all cards, headers, and buttons carry equal visual weight — vary size,
-   weight (`font-weight`), and color intensity (`--text-primary` vs
-   `--text-tertiary`) to guide the eye top-to-bottom, left-to-right.
-2. **Consistent 8px spacing rhythm.** Pick spacing values from a scale
-   (4/8/12/16/24/32/48/64px) — never arbitrary numbers like `13px` or `22px`.
-   Add `--space-*` tokens to `index.css` if they don't exist yet and use them
-   everywhere so margins/padding/gaps line up across the whole app.
-3. **One accent color, used sparingly.** `--accent`/`--accent-gradient` should
-   mark only the primary action per screen (one filled CTA button, key
-   metrics, active nav state). Everything else stays neutral
-   (`--text-secondary`, `--border-color`, subtle surfaces). A screen with 5
-   different colorful buttons reads as amateur — a screen with 1 accent + calm
-   neutrals reads as professional.
-4. **Typography discipline.** Max 3 font sizes per screen (e.g. page title,
-   section heading, body). Use `font-weight` (600/700 for emphasis, 400 for
-   body) instead of introducing new sizes. Line-height ~1.5 for body text,
-   tighter (1.2) for headings. Never center-align paragraphs of body copy —
-   left-align it.
-5. **Alignment on an invisible grid.** Card grids, form fields, and buttons
-   should snap to consistent column widths/gaps (`display:grid` with a fixed
-   `gap`, not ad-hoc flexbox margins). Nothing should look "close but not
-   quite" aligned to its neighbor.
-6. **Purposeful elevation.** Use shadow only to indicate interactivity or
-   layering (modals over content, hover-raise on clickable cards) — not on
-   every static box. Flat surfaces + `--border-color` for most cards; shadow
-   reserved for modals, dropdowns, and hover states.
-7. **Micro-interactions everywhere something is clickable.** Buttons, cards,
-   and nav links need a hover + active + focus-visible state (subtle
-   background shift, 1px lift, or border color change, ~150ms ease
-   transition). A UI with no hover feedback feels unfinished.
-8. **Confident empty/loading/error states, not placeholder text.** Empty
-   states get a small illustration or icon, one sentence explaining the
-   situation, and a primary action button — never a bare "No data." Loading
-   states use skeleton shapes (matching the real layout) instead of a generic
-   spinner where a page has structured content.
-9. **Data gets treated like data.** Numbers, statuses, and metrics (stat
-   cards, deployment status, build results) should use tabular alignment,
-   a monospace or tabular-nums numeric style for figures, and color only for
-   semantic status (`--success`/`--warning`/`--danger`) — never decorative
-   color on numbers.
-10. **Copy tone: concise and confident.** Button labels are verbs ("Create
-    service", not "Click here to create a new service"). Headings state the
-    outcome, not the mechanism. Error messages say what happened and what to
-    do next, not raw error codes.
-11. **Icons are consistent and purposeful.** Pick one icon set (FontAwesome is
-    already installed) and one stroke/fill style throughout — never mix icon
-    styles. Icons reinforce meaning (status, action type), they don't decorate
-    empty space.
-12. **Restraint on gradients/effects.** The dark glassy aesthetic already in
-    `index.css` (`--accent-gradient`, translucent surfaces, soft shadows) is
-    the intended "premium" signature — reuse it consistently rather than
-    adding new gradients, glow effects, or animations per-page. Repetition of
-    the same signature effect across the app reads as intentional branding;
-    novelty per page reads as inconsistency.
+If the current page looks like a generic admin template, replace the visual composition.
 
-Before calling any redesigned screen done, self-check it against this list —
-if a screen still has mixed spacing, more than one accent color, no
-hover states, or a bare empty state, it isn't at the professional bar yet.
+If the current components look disconnected, create a coherent design system.
 
-## Before you touch any styling
-1. Read `src/index.css` for the full token list (colors, radii, font sizes,
-   shadows) — **never hardcode a hex color, px radius, or shadow**; use the
-   matching `var(--token)` instead so light/dark theme keeps working.
-2. Check `[data-theme='light']` in `src/index.css` when adding a new token —
-   every new `--bg-*`/`--text-*`/`--border-*` token needs a light-mode override
-   there, or the light theme will silently break.
-3. Skim the target component's sibling `.css` file (co-located, e.g.
-   `Projects/Projects.css`, `Terraform/Terraform.css`) and reuse existing
-   classes before inventing new ones — this codebase leans on a handful of
-   shared shell/card/button classes across pages (see below).
+The final result must feel like a **single premium product**, not a collection of individually designed pages.
 
-## Design tokens (source of truth: `src/index.css`)
-- **Radius**: `--radius-lg` (14px, cards/modals), `--radius-md` (10px, inputs),
-  `--radius-sm` (8px), `--radius-xs` (6px, pills/badges)
-- **Type**: `--font-family` (Inter), scale `--font-xs` → `--font-xl`
-- **Surfaces**: `--bg-page`, `--bg-sidebar`, `--bg-surface`,
-  `--bg-surface-strong`, `--bg-surface-soft`, `--bg-surface-hover`, `--bg-input`,
-  `--bg-modal`, `--bg-modal-backdrop`
-- **Borders**: `--border-color`, `--border-color-strong`
-- **Text**: `--text-primary`, `--text-secondary`, `--text-tertiary`, `--text-muted`
-- **Brand/accent**: `--accent`, `--accent-2`, `--accent-gradient`,
-  `--accent-solid`, `--accent-soft`, `--accent-soft-strong`,
-  `--sidebar-active-bg`
-- **Status**: `--success` / `--success-bg`, `--warning` / `--warning-bg`,
-  `--danger` / `--danger-strong` / `--danger-bg`
-- **Elevation**: `--shadow-color`, `--shadow-color-strong`
+---
 
-Theme is toggled by `ThemeProvider` setting `data-theme` on `<html>` — design
-every new surface so it looks correct in both `dark` (default) and `light`.
+# PRODUCT IDENTITY
 
-## Reusable structural classes already in the codebase
-Prefer these over new one-off classes:
-- Page shell: `.projects-shell`, `.projects-header`, `.projects-title`,
-  `.projects-subtitle`, `.projects-state` / `.projects-state--error`
-- Buttons: `.project-button`, `.project-button--primary`,
-  `.project-button--ghost`
-- Cards: `.project-card`, `.project-card--new`, `.service-card`,
-  `.service-grid`
-- Auth: `.auth-shell`, `.auth-card`, `.auth-brand`, `.auth-link`
-- Status pills follow the `*-status--<state>` pattern (see
-  `ActiveProjects.css`'s `active-project-status--applied/destroying/…`) —
-  reuse this pattern for any new status indicator instead of inventing colors
-  inline.
+This is an:
 
-Naming convention across the app: kebab-case BEM-ish
-(`block`, `block__element`, `block--modifier`). Match it in new CSS.
+**Intelligent Infrastructure Automation Platform**
 
-## Component patterns to follow
-- **Multi-step flows** (Terraform, Kubernetes wizards): a step tracker header
-  + one active step component + Back/Next actions. Reuse the
-  `KubernetesWizard`/`TerraformSetupWizard` step-tracker markup/pattern rather
-  than building a bespoke stepper.
-- **Modals**: controlled by local `useState` boolean + `onClose`/`onSubmit`
-  props (see `ServiceCreateModal`, `AddNewToken`) — backdrop uses
-  `--bg-modal-backdrop`, panel uses `--bg-modal`.
-- **Async states**: every data-fetching page renders explicit `loading`,
-  `error`, and `empty` states via `.projects-state` (and its `--error`
-  modifier) — never leave a bare blank screen while fetching or when a list is
-  empty; always give the empty state a one-line explanation + a primary action
-  (e.g., "No services yet. Add your first service to deploy your app.").
-- **Forms**: label + input pairs styled with `--bg-input` /
-  `--border-color-strong`; submit buttons show a busy/disabled state during
-  submission and surface `serviceError`/`serviceSuccess`-style inline messages,
-  not native `alert()`.
+The visual language should communicate:
 
-## Responsiveness & accessibility
-- Primary breakpoint already used in `App.css` is `900px` (sidebar/app-shell
-  collapses to column). Reuse this breakpoint for new layouts instead of
-  picking an arbitrary one.
-- Every interactive card/div that acts as a button (e.g.
-  `.project-card--new-action`) needs a real `<button>`/`role="button"` +
-  keyboard handling if it isn't already a semantic element — don't ship
-  click-only `<div>` actions.
-- Maintain contrast against `--text-secondary`/`--text-tertiary` on both
-  themes; check new colors against `[data-theme='light']` too, not just dark.
-- Respect `prefers-reduced-motion` for any new transition/animation you add.
+* Cloud
+* Infrastructure
+* Automation
+* Intelligence
+* Reliability
+* Security
+* Monitoring
+* Control
+* Engineering
+* Modern technology
 
-## What "good" looks like here
-- Dark, glassy, gradient-accented control-center aesthetic: translucent
-  surfaces (`rgba` backgrounds), soft large shadows, `--accent-gradient` for
-  primary CTAs/highlights, generous `--radius-lg` corners on cards/modals.
-- Dense but breathable dashboards: stat cards, side panels, and status pills
-  over walls of text.
-- Never mixes in an unrelated visual language (no default Bootstrap blue
-  buttons, no square corners, no pure-white cards in dark mode).
+The interface should visually communicate:
 
-## Do
-- Extend `index.css` tokens when a new semantic color/spacing is genuinely
-  needed, then use the token everywhere, including light mode.
-- Co-locate new component CSS next to the `.jsx` file, matching existing
-  folder layout (`Components/<Feature>/<Feature>.jsx` + `.css`).
-- Keep new pages inside `Mainlayout` + `ProtectedRoute` unless they're
-  pre-auth (login/register/recovery).
+> "This platform gives engineers a powerful control center for their infrastructure."
 
-## Don't
-- Don't hardcode hex colors, `px` shadows, or radii — always a `var(--token)`.
-- Don't introduce a second design system (e.g., pulling in MUI/Tailwind) —
-  this is a single custom CSS token system.
-- Don't add Bootstrap component classes to new UI even though the package is
-  installed.
-- Don't ship a loading/empty/error-less async page.
+---
+
+# DESIGN PERSONALITY
+
+The visual personality should be:
+
+* Premium
+* Modern
+* Technical
+* Intelligent
+* Confident
+* Clean
+* Futuristic but practical
+* Professional
+* Calm
+* High-tech
+* Enterprise-ready
+
+Avoid making it:
+
+* childish
+* overly colorful
+* generic
+* template-like
+* cluttered
+* overly corporate
+* boring
+* visually flat
+* excessively futuristic
+
+---
+
+# VERY IMPORTANT: BUSINESS-FIRST DESIGN
+
+Every important page should answer:
+
+> "Why would a user care about this information?"
+
+Do not design interfaces simply because they look attractive.
+
+Design around decisions.
+
+For example:
+
+Instead of simply displaying:
+
+"CPU: 47%"
+
+show:
+
+"CPU Usage
+47%
+Healthy
++3% from last hour"
+
+Instead of:
+
+"Deployment #128"
+
+show:
+
+"Production Deployment
+v2.4.1
+Running
+Started 4 min ago"
+
+Instead of:
+
+"12 servers"
+
+show:
+
+"12 Infrastructure Resources
+10 Healthy · 2 Warning"
+
+The UI should help the user understand:
+
+* What is happening?
+* Is everything healthy?
+* What needs attention?
+* What changed?
+* What should I do next?
+
+---
+
+# VISUAL IMPACT
+
+The first 5 seconds matter.
+
+When someone opens the application, they should immediately see:
+
+1. The product identity
+2. The current infrastructure health
+3. The most important metrics
+4. Problems requiring attention
+5. The major actions available
+
+Do not bury important information below the fold.
+
+Create strong visual hierarchy.
+
+---
+
+# DO NOT BUILD A GENERIC ADMIN DASHBOARD
+
+Do NOT produce the typical:
+
+```text
+Sidebar
+Topbar
+
+[Card] [Card] [Card] [Card]
+
+[Huge empty chart]
+
+[Table]
+```
+
+unless the information genuinely requires it.
+
+Avoid making every piece of information a rectangular card.
+
+Use different visual structures:
+
+* metric blocks
+* timeline
+* activity feed
+* status panels
+* topology
+* charts
+* tables
+* grouped sections
+* command/action areas
+* contextual panels
+* expandable sections
+
+The page should have visual rhythm.
+
+---
+
+# DESIGN SYSTEM
+
+Create a coherent design system across the entire application.
+
+Define and consistently use:
+
+## Typography
+
+Use clear hierarchy:
+
+* Display / hero
+* Page title
+* Section title
+* Card title
+* Body
+* Secondary text
+* Metadata
+* Labels
+
+Do not use too many font sizes.
+
+Typography should immediately tell the user what is important.
+
+---
+
+## SPACING
+
+Use a deliberate spacing system.
+
+Do not randomly use different margins and padding everywhere.
+
+Create consistent relationships between:
+
+* page
+* section
+* card
+* content
+* controls
+
+The interface should feel intentionally aligned.
+
+---
+
+## COLORS
+
+Use a sophisticated palette.
+
+Primary colors should support the product identity.
+
+Use semantic colors for:
+
+* success
+* warning
+* error
+* information
+* neutral
+
+Do not use bright colors everywhere.
+
+Color should create hierarchy, not noise.
+
+---
+
+# DARK MODE
+
+If the existing application supports dark mode, make it genuinely premium.
+
+Do not simply turn white backgrounds into black.
+
+Use layered surfaces:
+
+```text
+Background
+   ↓
+Primary surface
+   ↓
+Secondary surface
+   ↓
+Elevated surface
+   ↓
+Interactive surface
+```
+
+Use subtle borders and depth.
+
+Dark mode should feel like a modern cloud engineering control center.
+
+---
+
+# GLASSMORPHISM
+
+Glassmorphism may be used, but strategically.
+
+Good uses:
+
+* floating navigation
+* elevated panels
+* command/action areas
+* modal surfaces
+* special dashboard sections
+* infrastructure visualization
+
+Avoid making every component transparent.
+
+The UI must remain readable.
+
+---
+
+# DEPTH
+
+Use subtle depth through:
+
+* layered surfaces
+* borders
+* shadows
+* gradients
+* blur
+* elevation
+* overlapping elements
+
+Do not tilt everything.
+
+Do not make every card 3D.
+
+Depth should support hierarchy.
+
+---
+
+# ANIMATION
+
+Animation should make the product feel alive and polished.
+
+Use subtle animation for:
+
+* page transitions
+* hover states
+* expanding sections
+* modal transitions
+* notifications
+* status updates
+* chart rendering
+* infrastructure topology
+* deployment progress
+* loading states
+
+Animations should generally be:
+
+* fast
+* smooth
+* purposeful
+* subtle
+
+Never animate important information so much that it becomes difficult to read.
+
+Always support:
+
+`prefers-reduced-motion`
+
+---
+
+# HERO / OVERVIEW EXPERIENCE
+
+If the application has an overview/dashboard page, treat it as the product's main stage.
+
+It should not feel like a random collection of widgets.
+
+Create a deliberate composition.
+
+Example conceptual structure:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Good afternoon, Janna                         ● Healthy │
+│ Infrastructure overview                                 │
+│                                                         │
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌──────────┐ │
+│ │ Resources │ │ Healthy   │ │ Deploying │ │ Alerts   │ │
+│ │    24     │ │    21     │ │     2    │ │    1     │ │
+│ └───────────┘ └───────────┘ └───────────┘ └──────────┘ │
+│                                                         │
+│ ┌──────────────────────────┐ ┌────────────────────────┐ │
+│ │ Infrastructure Health    │ │ Needs Attention        │ │
+│ │                          │ │                        │ │
+│ │       topology           │ │ ⚠ Database CPU high   │ │
+│ │                          │ │ ● Deployment running  │ │
+│ └──────────────────────────┘ └────────────────────────┘ │
+│                                                         │
+│ Recent activity                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+This is only an example.
+
+Use the application's actual functionality and data.
+
+---
+
+# INFRASTRUCTURE VISUALIZATION
+
+Infrastructure visualization is one of the places where this product can differentiate itself.
+
+When infrastructure relationships exist, create visually compelling representations.
+
+Example:
+
+```text
+                  Internet
+                     │
+                     ▼
+                Load Balancer
+                     │
+              ┌──────┴──────┐
+              ▼             ▼
+          App Server     App Server
+              │             │
+              └──────┬──────┘
+                     ▼
+                  Database
+                     │
+                     ▼
+                   Cache
+```
+
+Nodes should communicate:
+
+* resource type
+* name
+* status
+* health
+* important metric
+
+Connections can communicate:
+
+* traffic
+* dependency
+* relationship
+* deployment flow
+
+Use SVG, CSS, canvas, or existing project technology where appropriate.
+
+Only use heavy 3D technologies if they provide meaningful value.
+
+---
+
+# DASHBOARD INFORMATION HIERARCHY
+
+The dashboard should prioritize:
+
+## Level 1 — Immediate health
+
+Examples:
+
+* System Healthy
+* 2 Warnings
+* 1 Failed Deployment
+* 98.4% Availability
+
+## Level 2 — Important operational metrics
+
+Examples:
+
+* Infrastructure resources
+* CPU
+* Memory
+* Deployments
+* Automation jobs
+
+## Level 3 — Context
+
+Examples:
+
+* Recent activity
+* Logs
+* Events
+* Historical charts
+
+## Level 4 — Detailed information
+
+Examples:
+
+* Full tables
+* Configuration
+* Metadata
+
+Do not give everything the same visual importance.
+
+---
+
+# ACTION-ORIENTED UI
+
+Users should easily understand what they can do.
+
+Important actions should be obvious.
+
+Examples:
+
+* Deploy
+* Create Resource
+* Run Automation
+* View Logs
+* Scale
+* Restart
+* Investigate
+* Configure
+
+Primary actions should visually stand out.
+
+Secondary actions should remain available without competing with primary actions.
+
+Dangerous actions should be clearly differentiated.
+
+---
+
+# MICROCOPY
+
+Do not use robotic labels when a clearer phrase exists.
+
+Prefer:
+
+"Deploy Application"
+
+over:
+
+"Execute"
+
+Prefer:
+
+"View Infrastructure"
+
+over:
+
+"Open"
+
+Prefer:
+
+"No deployments yet"
+
+over:
+
+"No data"
+
+Prefer:
+
+"Everything is healthy"
+
+over:
+
+"Status: OK"
+
+The UI should feel human and intentional.
+
+---
+
+# EMPTY STATES
+
+Never make empty states look broken.
+
+Bad:
+
+```text
+No data
+```
+
+Better:
+
+```text
+No deployments yet
+
+Your application hasn't been deployed.
+Start your first deployment to see activity here.
+
+[ Deploy Application ]
+```
+
+Use the actual available action.
+
+Never invent functionality.
+
+---
+
+# ERROR STATES
+
+Errors should be understandable.
+
+Bad:
+
+```text
+Error 500
+```
+
+Better:
+
+```text
+We couldn't load your infrastructure
+
+The infrastructure service did not respond.
+
+[ Try Again ]
+```
+
+If technical information is useful, allow it to be expanded.
+
+---
+
+# LOADING STATES
+
+Do not leave blank screens while data loads.
+
+Use:
+
+* skeletons
+* progress indicators
+* contextual loading messages
+
+Maintain the layout while content loads to prevent visual jumping.
+
+---
+
+# TABLE DESIGN
+
+Tables should feel like professional engineering tools.
+
+Use:
+
+* strong column hierarchy
+* compact but readable rows
+* status badges
+* clear actions
+* search
+* filters where useful
+* sorting where useful
+* pagination where appropriate
+
+Avoid turning tables into giant colorful cards.
+
+---
+
+# SEARCH AND FILTERS
+
+When there is a significant amount of infrastructure data, help users find things quickly.
+
+Use:
+
+* search
+* filters
+* status filters
+* resource type filters
+* date filters
+
+Filters should be visually simple and easy to remove.
+
+---
+
+# RESPONSIVE DESIGN
+
+The product must remain usable on:
+
+* large desktop
+* laptop
+* tablet
+* mobile where appropriate
+
+Do not merely shrink everything.
+
+Recompose the interface when necessary.
+
+---
+
+# ICONOGRAPHY
+
+Use a consistent icon system.
+
+Icons should:
+
+* have consistent stroke/weight
+* have consistent sizing
+* communicate meaning
+* align correctly
+
+Do not mix random icon styles.
+
+---
+
+# VISUAL POLISH
+
+Pay attention to details that make a product feel expensive:
+
+* alignment
+* spacing
+* typography
+* border treatment
+* hover states
+* focus states
+* icon alignment
+* button proportions
+* consistent corner radius
+* subtle shadows
+* transitions
+* empty states
+* loading states
+* feedback messages
+
+These details matter enormously.
+
+---
+
+# COMPONENT STRATEGY
+
+Create reusable components instead of repeating styles.
+
+Examples:
+
+* AppShell
+* Sidebar
+* Header
+* PageHeader
+* SectionHeader
+* StatCard
+* Metric
+* StatusBadge
+* ResourceCard
+* DataTable
+* ActivityTimeline
+* AlertPanel
+* EmptyState
+* LoadingState
+* ErrorState
+* Modal
+* ConfirmationDialog
+* FilterBar
+* SearchInput
+
+Before creating a new component, inspect the existing codebase for an equivalent.
+
+---
+
+# TECHNOLOGY RULE
+
+DO NOT automatically install:
+
+* GSAP
+* Three.js
+* React Three Fiber
+* Tailwind
+* another component library
+* another state management library
+
+First inspect the existing project.
+
+Use existing technologies whenever possible.
+
+Only add a dependency if it provides meaningful value.
+
+The design quality matters more than the number of libraries.
+
+---
+
+# PERFORMANCE
+
+Do not sacrifice performance for visual effects.
+
+Avoid:
+
+* continuously animated shadows
+* unnecessary blur
+* excessive DOM animation
+* huge images
+* unnecessary 3D scenes
+* excessive particle effects
+
+Animations should remain lightweight.
+
+---
+
+# ACCESSIBILITY
+
+The interface must remain accessible.
+
+Ensure:
+
+* readable contrast
+* keyboard navigation
+* focus states
+* semantic controls
+* accessible labels
+* status information not communicated only through color
+* reduced motion support
+
+---
+
+# DO NOT INVENT PRODUCT FUNCTIONALITY
+
+This is critical.
+
+You may improve how existing functionality is presented.
+
+You may not invent:
+
+* fake infrastructure
+* fake metrics
+* fake deployments
+* fake monitoring data
+* fake buttons
+* fake workflows
+
+unless the task explicitly requests mock/demo data.
+
+The UI must represent the real product.
+
+---
+
+# DO NOT DESTROY EXISTING FUNCTIONALITY
+
+Never sacrifice working functionality merely to make the UI prettier.
+
+Preserve:
+
+* routes
+* API calls
+* authentication
+* authorization
+* forms
+* backend communication
+* existing workflows
+
+If the current implementation makes a UI improvement difficult, refactor carefully.
+
+---
+
+# VISUAL REVIEW
+
+After implementation, do a visual review.
+
+Ask:
+
+### First impression
+
+Does this look like a real commercial product?
+
+### Hierarchy
+
+Can a new user understand the page within 5 seconds?
+
+### Business value
+
+Does the UI communicate why the platform is useful?
+
+### Usability
+
+Can the user easily understand what to do next?
+
+### Consistency
+
+Do pages feel like the same application?
+
+### Visual quality
+
+Does it feel premium?
+
+### Catchiness
+
+Does the interface have memorable visual elements without becoming distracting?
+
+### Technical identity
+
+Does it clearly feel like a cloud/infrastructure platform?
+
+---
+
+# THE MOST IMPORTANT RULE
+
+Do not optimize for:
+
+> "Make the code technically correct."
+
+Optimize for:
+
+> "Make the product feel so polished that someone seeing it for the first time believes it is a real commercial infrastructure platform."
+
+Technical correctness is required.
+
+But visual hierarchy, product clarity, usability, and perceived quality are equally important.
+
+---
+
+# FINAL STANDARD
+
+The finished application should feel closer to:
+
+* a premium cloud platform
+* a modern DevOps control center
+* a polished SaaS product
+* an enterprise infrastructure management platform
+
+and much less like:
+
+* a university project
+* a generic CRUD application
+* a default admin template
+* a collection of cards
+* an unfinished dashboard
+
+Every page should look intentional.
+
+Every important action should be obvious.
+
+Every important piece of information should have a visual priority.
+
+The product should be **catchy without being childish, futuristic without being impractical, and powerful without being confusing.**

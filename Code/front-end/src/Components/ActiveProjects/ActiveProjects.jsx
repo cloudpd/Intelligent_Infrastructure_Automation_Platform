@@ -19,13 +19,20 @@ function DeploymentRow({ deployment }) {
       to={`/active-projects/${deployment.id}`}
       className='active-project-row'
     >
-      <div className='active-project-row__main'>
-        <span className='active-project-row__project'>{projectName}</span>
-        <span className='active-project-row__service'>{serviceName} · {deployment.environment}</span>
+      <div className='active-project-row__left'>
+        <span className={`active-project-dot active-project-dot--${status}`} />
+        <div className='active-project-row__main'>
+          <span className='active-project-row__project'>{projectName}</span>
+          <span className='active-project-row__service'>{serviceName} · {deployment.environment}</span>
+        </div>
       </div>
-      <span className={`active-project-status active-project-status--${status}`}>
-        {STATUS_LABEL[status] || status}
-      </span>
+
+      <div className='active-project-row__right'>
+        <span className={`active-project-status active-project-status--${status}${status === 'destroying' ? ' active-project-status--pulse' : ''}`}>
+          {STATUS_LABEL[status] || status}
+        </span>
+        <i className='fa-solid fa-chevron-right active-project-row__chevron' aria-hidden='true' />
+      </div>
     </Link>
   );
 }
@@ -57,7 +64,7 @@ export default function ActiveProjects() {
       })
       .catch((err) => {
         console.error('Failed to fetch active projects:', err);
-        setError('Could not load your active projects.');
+        setError('Could not load active projects.');
       })
       .finally(() => setLoading(false));
   }
@@ -70,17 +77,20 @@ export default function ActiveProjects() {
     <aside className='active-projects-panel'>
       <div className='active-projects-panel__header'>
         <div>
-          <h2 className='active-projects-panel__title'>Active projects</h2>
-          <p className='active-projects-panel__subtitle'>Infrastructure that is currently live</p>
+          <h2 className='active-projects-panel__title'>
+            <i className='fa-solid fa-bolt active-projects-panel__icon' aria-hidden='true' />
+            Active Infrastructure
+          </h2>
+          <p className='active-projects-panel__subtitle'>Live resources deployed in your AWS environment</p>
         </div>
         <button
           type='button'
           className='active-projects-panel__refresh'
           onClick={fetchDeployments}
           aria-label='Refresh active projects'
-          title='Refresh'
+          title='Refresh active deployments'
         >
-          ↻
+          <i className={`fa-solid fa-rotate-right ${loading ? 'fa-spin' : ''}`} aria-hidden='true' />
         </button>
       </div>
 
@@ -95,13 +105,17 @@ export default function ActiveProjects() {
       {!loading && error && (
         <div className='active-projects-panel__state active-projects-panel__state--error'>
           <p>{error}</p>
-          <button type='button' onClick={fetchDeployments}>Try again</button>
+          <button type='button' className='project-button project-button--ghost' onClick={fetchDeployments}>Try again</button>
         </div>
       )}
 
       {!loading && !error && deployments.length === 0 && (
-        <div className='active-projects-panel__state'>
-          <p>No live infrastructure yet. Run Terraform Apply on a service to see it here.</p>
+        <div className='active-projects-panel__state active-projects-panel__state--empty'>
+          <div className='active-panel-empty-icon'>
+            <i className='fa-solid fa-server' aria-hidden='true' />
+          </div>
+          <p className='active-panel-empty-title'>No active deployments</p>
+          <p className='active-panel-empty-text'>Apply Terraform on a service to monitor live resources here.</p>
         </div>
       )}
 

@@ -240,3 +240,53 @@
   outline: 2px solid var(--accent-solid);
   outline-offset: 2px;
 }
+
+/* ---- Completion Card ---- */
+.dockerize-completion-card {
+  max-width: 540px;
+  margin: var(--space-6) auto 0;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--pipeline-done-border);
+  box-shadow: 0 24px 80px var(--shadow-color-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.dockerize-completion-card__badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--pipeline-done-bg);
+  border: 1px solid var(--pipeline-done-border);
+  color: var(--success);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  margin-bottom: var(--space-4);
+  box-shadow: 0 0 24px var(--pipeline-done-bg);
+}
+
+.dockerize-completion-card__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dockerize-completion-card__text {
+  margin: 0 0 var(--space-5);
+  color: var(--text-tertiary);
+  font-size: var(--font-base);
+  line-height: 1.6;
+}
+
+.dockerize-completion-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}

@@ -1,99 +1,127 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './ServiceCard.css';
-
-const PIPELINE_STAGES = [
-  {
-    key: 'terraform-setup',
-    icon: 'fa-solid fa-gear',
-    label: 'Terraform Setup',
-    getTo: (serviceId) => `/services/${serviceId}/terraform-setup`,
-  },
-  {
-    key: 'terraform-config',
-    icon: 'fa-solid fa-sliders',
-    label: 'Terraform Config',
-    getTo: (serviceId) => `/services/${serviceId}/terraform-configuration`,
-  },
-  {
-    key: 'dockerize',
-    icon: 'fa-brands fa-docker',
-    label: 'Dockerize',
-    getTo: (serviceId) => `/services/${serviceId}/dockerize`,
-  },
-  {
-    key: 'ci',
-    icon: 'fa-solid fa-rotate',
-    label: 'CI Pipeline',
-    getTo: (serviceId, projectId) => `/projects/${projectId}/services/${serviceId}/ci`,
-    needsProject: true,
-  },
-  {
-    key: 'k8s',
-    icon: 'fa-solid fa-dharmachakra',
-    label: 'Kubernetes',
-    getTo: (serviceId, projectId) => `/projects/${projectId}/services/${serviceId}/k8s`,
-    needsProject: true,
-  },
-];
+import StatusBadge from '../Shared/StatusBadge';
 
 export default function ServiceCard({ service, projectId }) {
-  const id        = service.id || service._id;
-  const name      = service.name || 'Untitled service';
-  const branch    = service.branch || '';
+  const id = service.id || service._id;
+  const name = service.name || 'Untitled service';
+  const branch = service.branch || 'main';
   let repoDisplay = service.repository_url || '';
-  repoDisplay = repoDisplay
-    .replace(/^https?:\/\/github\.com\//, '')
-    .split('/')[1]
-    ?.substring(0, 24) || repoDisplay.substring(0, 24) || '—';
+  repoDisplay = repoDisplay.replace(/^https?:\/\/github\.com\//, '') || '—';
+
+  // Logical stage detection (can be expanded based on service state)
+  const isTerraformSetupDone = Boolean(service.terraform_setup_complete || service.vpc_id || service.aws_credential_id);
+  const isTerraformApplied = Boolean(service.terraform_applied || service.status === 'applied');
+  const isDockerized = Boolean(service.dockerfile_path || service.dockerfile_complete);
+  const isCiDone = Boolean(service.ci_pushed);
+
+  // Determine current logical next action
+  let primaryAction = {
+    label: 'Start Setup',
+    to: `/services/${id}/terraform-setup`,
+    icon: 'fa-solid fa-arrow-right',
+    stageName: 'Step 1: Terraform Setup',
+  };
+
+  if (isCiDone) {
+    primaryAction = {
+      label: 'Configure Kubernetes',
+      to: projectId ? `/projects/${projectId}/services/${id}/k8s` : `/services/${id}/k8s`,
+      icon: 'fa-solid fa-dharmachakra',
+      stageName: 'Step 5: Kubernetes',
+    };
+  } else if (isDockerized) {
+    primaryAction = {
+      label: 'Set up CI Pipeline',
+      to: projectId ? `/projects/${projectId}/services/${id}/ci` : `/services/${id}/ci`,
+      icon: 'fa-solid fa-rotate',
+      stageName: 'Step 4: CI Pipeline',
+    };
+  } else if (isTerraformApplied) {
+    primaryAction = {
+      label: 'Dockerize Service',
+      to: `/services/${id}/dockerize`,
+      icon: 'fa-brands fa-docker',
+      stageName: 'Step 3: Dockerize',
+    };
+  } else if (isTerraformSetupDone) {
+    primaryAction = {
+      label: 'Configure & Apply Terraform',
+      to: `/services/${id}/terraform-configuration`,
+      icon: 'fa-solid fa-sliders',
+      stageName: 'Step 2: Terraform Config',
+    };
+  }
+
+  const STAGES = [
+    { num: 1, label: 'Setup', done: isTerraformSetupDone },
+    { num: 2, label: 'Config', done: isTerraformApplied },
+    { num: 3, label: 'Docker', done: isDockerized },
+    { num: 4, label: 'CI', done: isCiDone },
+    { num: 5, label: 'K8s', done: Boolean(service.k8s_complete) },
+  ];
 
   return (
-    <div className='service-card service-card--pipeline'>
-      {/* Card header */}
+    <div className='service-card service-card--modern'>
+      {/* Header */}
       <div className='service-card__header'>
-        <div>
-          <div className='service-title'>{name}</div>
-          {repoDisplay && repoDisplay !== '—' && (
-            <p className='service-label'>
-              <i className='fa-brands fa-github service-card__meta-icon' aria-hidden='true' />
-              {repoDisplay}
-              {branch && <span className='service-card__branch'> · {branch}</span>}
-            </p>
-          )}
+        <div className='service-card__brand'>
+          <div className='service-card__icon-box'>
+            <i className='fa-solid fa-cube' aria-hidden='true' />
+          </div>
+          <div>
+            <h3 className='service-title'>{name}</h3>
+            {repoDisplay !== '—' ? (
+              <p className='service-label'>
+                <i className='fa-brands fa-github service-card__meta-icon' aria-hidden='true' />
+                <span title={service.repository_url}>{repoDisplay}</span>
+                <span className='service-card__branch'> · {branch}</span>
+              </p>
+            ) : (
+              <p className='service-label'>No repository linked</p>
+            )}
+          </div>
+        </div>
+        <StatusBadge
+          status={isTerraformApplied ? 'live' : 'draft'}
+          customLabel={isTerraformApplied ? 'Live' : 'Configuring'}
+          size='sm'
+        />
+      </div>
+
+      {/* Visual Pipeline Stage Dots */}
+      <div className='service-card__pipeline-track'>
+        <div className='pipeline-track__label-row'>
+          <span className='pipeline-track__stage-title'>{primaryAction.stageName}</span>
+        </div>
+        <div className='pipeline-track__dots'>
+          {STAGES.map((s, idx) => (
+            <React.Fragment key={s.num}>
+              <div
+                className={`track-dot ${s.done ? 'track-dot--done' : idx === 0 || STAGES[idx - 1]?.done ? 'track-dot--active' : 'track-dot--locked'}`}
+                title={`Step ${s.num}: ${s.label}`}
+              >
+                {s.done ? (
+                  <i className='fa-solid fa-check' aria-hidden='true' />
+                ) : (
+                  <span>{s.num}</span>
+                )}
+              </div>
+              {idx < STAGES.length - 1 && (
+                <div className={`track-line ${s.done ? 'track-line--done' : ''}`} />
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
-      {/* Pipeline stage buttons */}
-      <div className='service-pipeline' role='list' aria-label='Deployment pipeline stages'>
-        {PIPELINE_STAGES.map((stage) => {
-          const to = (stage.needsProject && projectId)
-            ? stage.getTo(id, projectId)
-            : (!stage.needsProject ? stage.getTo(id) : null);
-
-          // If CI/K8s but no projectId available, disable gracefully
-          if (!to) {
-            return (
-              <div key={stage.key} className='service-pipeline__stage service-pipeline__stage--disabled' role='listitem'>
-                <i className={stage.icon} aria-hidden='true' />
-                <span>{stage.label}</span>
-              </div>
-            );
-          }
-
-          return (
-            <Link
-              key={stage.key}
-              to={to}
-              className='service-pipeline__stage'
-              role='listitem'
-              title={`Go to ${stage.label}`}
-            >
-              <i className={stage.icon} aria-hidden='true' />
-              <span>{stage.label}</span>
-              <i className='fa-solid fa-arrow-right service-pipeline__arrow' aria-hidden='true' />
-            </Link>
-          );
-        })}
+      {/* Single Primary Action Button */}
+      <div className='service-card__footer'>
+        <Link to={primaryAction.to} className='project-button project-button--primary service-card__btn'>
+          <span>{primaryAction.label}</span>
+          <i className={primaryAction.icon} aria-hidden='true' />
+        </Link>
       </div>
     </div>
   );

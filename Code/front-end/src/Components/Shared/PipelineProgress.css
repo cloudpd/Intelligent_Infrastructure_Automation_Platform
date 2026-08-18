@@ -13,7 +13,6 @@
   display: none;
 }
 
-/* ---- Stage node ---- */
 .pipeline-stage {
   display: flex;
   flex-direction: column;
@@ -22,6 +21,23 @@
   flex-shrink: 0;
   min-width: 88px;
   cursor: default;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pipeline-stage--clickable {
+  cursor: pointer;
+}
+
+.pipeline-stage--clickable:hover .pipeline-stage__icon {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--shadow-color);
+}
+
+.pipeline-stage--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .pipeline-stage__icon {

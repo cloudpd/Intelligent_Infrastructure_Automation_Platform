@@ -211,16 +211,19 @@ export default function KubernetesWizard() {
     );
   }
 
+  const effectiveProjectId = projectId || service?.project_id || service?.project?.id;
+
   return (
     <div className='projects-shell'>
       <Breadcrumb crumbs={[
         { label: 'Home', to: '/home' },
         { label: 'Projects', to: '/projects' },
-        ...(projectId ? [{ label: 'Project', to: `/projects/${projectId}` }] : []),
+        ...(effectiveProjectId ? [{ label: service?.project?.name || 'Project', to: `/projects/${effectiveProjectId}` }] : []),
+        ...(service?.name ? [{ label: service.name }] : []),
         { label: 'Kubernetes' },
       ]} />
 
-      <PipelineProgress activeStage={5} />
+      <PipelineProgress activeStage={5} serviceId={serviceId} projectId={effectiveProjectId} />
 
       <header className='projects-header'>
         <div>
@@ -230,10 +233,15 @@ export default function KubernetesWizard() {
             production-ready Kubernetes manifests and push them to your repository.
           </p>
         </div>
-        <Link to={`/projects/${projectId}`} className='project-button project-button--ghost'>
-          <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
-          Back to project
-        </Link>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <Link to={effectiveProjectId ? `/projects/${effectiveProjectId}/services/${serviceId}/ci` : `/services/${serviceId}/ci`} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back to CI
+          </Link>
+          <Link to={effectiveProjectId ? `/projects/${effectiveProjectId}` : '/projects'} className='project-button project-button--ghost'>
+            Back to project
+          </Link>
+        </div>
       </header>
 
       {/* GitHub token warning when none saved */}

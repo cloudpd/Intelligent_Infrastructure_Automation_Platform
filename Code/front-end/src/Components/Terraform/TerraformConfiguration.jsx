@@ -518,7 +518,7 @@ export default function TerraformConfiguration() {
         { label: 'Terraform Configuration' },
       ]} />
 
-      <PipelineProgress activeStage={2} />
+      <PipelineProgress activeStage={2} serviceId={serviceId} />
 
       <header className='projects-header'>
         <div>

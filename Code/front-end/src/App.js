@@ -113,9 +113,21 @@ function App() {
             </ProtectedRoute>
         },
         {
+          path: '/services/:serviceId/ci', element:
+            <ProtectedRoute>
+              <CIServicePage />
+            </ProtectedRoute>
+        },
+        {
           path: '/projects/:projectId/services/:serviceId/ci', element:
             <ProtectedRoute>
               <CIServicePage />
+            </ProtectedRoute>
+        },
+        {
+          path: '/services/:serviceId/k8s', element:
+            <ProtectedRoute>
+              <KubernetesWizard />
             </ProtectedRoute>
         },
         {

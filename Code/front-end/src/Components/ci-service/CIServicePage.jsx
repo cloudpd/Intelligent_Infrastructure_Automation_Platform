@@ -299,25 +299,34 @@ export default function CIServicePage() {
         }
     };
 
+    const effectiveProjectId = projectId || service?.project_id || service?.project?.id;
+    const k8sTargetUrl = effectiveProjectId
+      ? `/projects/${effectiveProjectId}/services/${serviceId}/k8s`
+      : `/services/${serviceId}/k8s`;
+
     return (
         <div className='projects-shell'>
             <Breadcrumb crumbs={[
               { label: 'Home', to: '/home' },
               { label: 'Projects', to: '/projects' },
-              ...(projectId ? [{ label: 'Project', to: `/projects/${projectId}` }] : []),
+              ...(effectiveProjectId ? [{ label: service?.project?.name || 'Project', to: `/projects/${effectiveProjectId}` }] : []),
+              ...(service?.name ? [{ label: service.name }] : []),
               { label: 'CI Pipeline' },
             ]} />
 
-            <PipelineProgress activeStage={4} />
+            <PipelineProgress activeStage={4} serviceId={serviceId} projectId={effectiveProjectId} />
 
             <header className='projects-header'>
                 <div>
                     <h1 className='projects-title'>CI &amp; Secrets Setup</h1>
                     <p className='projects-subtitle'>Configure the CI workflow for {service?.name || 'this service'}.</p>
                 </div>
-                <div className='ci-actions'>
-                    <Link to={projectId ? `/projects/${projectId}` : '/projects'} className='project-button project-button--ghost'>
+                <div className='ci-actions' style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <Link to={`/services/${serviceId}/dockerize`} className='project-button project-button--ghost'>
                       <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+                      Back to Dockerize
+                    </Link>
+                    <Link to={effectiveProjectId ? `/projects/${effectiveProjectId}` : '/projects'} className='project-button project-button--ghost'>
                       Back to project
                     </Link>
                 </div>
@@ -372,17 +381,17 @@ export default function CIServicePage() {
               <>
                 <div className='ci-status'>{statusMessage}</div>
                 {/* Next step CTA */}
-                {projectId && serviceId && (
+                {serviceId && (
                   <div className='next-step-cta' style={{ marginTop: 'var(--space-4)' }}>
                     <span className='next-step-cta__text'>
                       <i className='fa-solid fa-circle-check' style={{ marginRight: '6px' }} aria-hidden='true' />
-                      CI workflow pushed! Next: configure Kubernetes.
+                      CI workflow pushed! Next step: configure Kubernetes.
                     </span>
                     <Link
-                      to={`/projects/${projectId}/services/${serviceId}/k8s`}
+                      to={k8sTargetUrl}
                       className='project-button project-button--primary'
                     >
-                      Kubernetes <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
+                      Configure Kubernetes <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
                     </Link>
                   </div>
                 )}
