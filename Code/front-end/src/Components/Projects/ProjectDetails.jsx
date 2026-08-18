@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ServiceCard, ServiceCreateModal } from '../Services';
 import './Projects.css';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
 
 
 export default function ProjectDetails() {
@@ -138,15 +139,26 @@ export default function ProjectDetails() {
     
   }, [projectId]);
 
+  const projectName = project?.name || project?.title || 'Project';
+
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        { label: projectName },
+      ]} />
+
       <header className='projects-header'>
         <div>
-          <h1 className='projects-title'>Project details</h1>
-          <p className='projects-subtitle'>Review the full project data and metadata below.</p>
+          <h1 className='projects-title'>{projectName}</h1>
+          <p className='projects-subtitle'>Manage services and launch your deployment pipeline.</p>
         </div>
         <div>
-          <Link to='/projects' className='project-button project-button--ghost'>Back to projects</Link>
+          <Link to='/projects' className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back to projects
+          </Link>
         </div>
       </header>
 
@@ -182,11 +194,20 @@ export default function ProjectDetails() {
 
             {projectServices.length > 0 ? (
               projectServices.map((service) => (
-                <ServiceCard key={service.id || service._id} service={service} />
+                <ServiceCard
+                  key={service.id || service._id}
+                  service={service}
+                  projectId={projectId}
+                />
               ))
             ) : (
-              <div className='projects-state'>
-                <p>No services yet. Add your first service to deploy your app.</p>
+              <div className='projects-state projects-state--empty'>
+                <i className='fa-solid fa-layer-group projects-state__icon' aria-hidden='true' />
+                <p>No services yet.</p>
+                <p className='projects-state__hint'>Add your first service to start the deployment pipeline.</p>
+                <button type='button' className='project-button project-button--primary' onClick={openServiceModal}>
+                  Add a service
+                </button>
               </div>
             )}
           </div>
