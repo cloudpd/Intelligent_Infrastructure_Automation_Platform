@@ -1,45 +1,141 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import './ServiceCard.css';
+import StatusBadge from '../Shared/StatusBadge';
 
 export default function ServiceCard({ service, projectId }) {
   const id = service.id || service._id;
   const name = service.name || 'Untitled service';
-  let repoUrl = service.repository_url || "No Github repo existed";
+  const branch = service.branch || 'main';
+  let repoDisplay = service.repository_url || '';
+  repoDisplay = repoDisplay.replace(/^https?:\/\/github\.com\//, '') || '—';
 
-  repoUrl = repoUrl
-    .replace(/^https?:\/\/github\.com\//, "") // remove https://github.com/
-    .split("/")[1]                            // get repository name
-    ?.substring(0, 20) || "";
+  let savedStage = 0;
+  try {
+    const stored = localStorage.getItem(`service_stage_${id}`);
+    if (stored) savedStage = parseInt(stored, 10) || 0;
+  } catch (e) {}
 
+  // Logical stage detection (backed by persistent stage state & backend flags)
+  const isTerraformSetupDone = Boolean(service.terraform_setup_complete || service.vpc_id || service.aws_credential_id || savedStage >= 1);
+  const isTerraformApplied = Boolean(service.terraform_applied || service.status === 'applied' || savedStage >= 2);
+  const isDockerized = Boolean(service.dockerfile_path || service.dockerfile_complete || savedStage >= 3);
+  const isCiDone = Boolean(service.ci_pushed || savedStage >= 4);
+  const isK8sDone = Boolean(service.k8s_applied || service.status === 'deployed' || savedStage >= 5);
 
+  // Determine current logical next action
+  let primaryAction = {
+    label: 'Start Setup',
+    to: `/services/${id}/terraform-setup`,
+    icon: 'fa-solid fa-arrow-right',
+    stageName: 'Step 1: Terraform Setup',
+  };
 
-  const branch = service.branch || '';
+  if (isK8sDone || savedStage === 5) {
+    primaryAction = {
+      label: 'Manage Kubernetes',
+      to: projectId ? `/projects/${projectId}/services/${id}/k8s` : `/services/${id}/k8s`,
+      icon: 'fa-solid fa-dharmachakra',
+      stageName: 'Step 5: Kubernetes Deployed',
+    };
+  } else if (isCiDone || savedStage === 4) {
+    primaryAction = {
+      label: 'Configure Kubernetes',
+      to: projectId ? `/projects/${projectId}/services/${id}/k8s` : `/services/${id}/k8s`,
+      icon: 'fa-solid fa-dharmachakra',
+      stageName: 'Step 5: Kubernetes',
+    };
+  } else if (isDockerized || savedStage === 3) {
+    primaryAction = {
+      label: 'Set up CI Pipeline',
+      to: projectId ? `/projects/${projectId}/services/${id}/ci` : `/services/${id}/ci`,
+      icon: 'fa-solid fa-rotate',
+      stageName: 'Step 4: CI Pipeline',
+    };
+  } else if (isTerraformApplied || savedStage === 2) {
+    primaryAction = {
+      label: 'Dockerize Service',
+      to: `/services/${id}/dockerize`,
+      icon: 'fa-brands fa-docker',
+      stageName: 'Step 3: Dockerize',
+    };
+  } else if (isTerraformSetupDone || savedStage === 1) {
+    primaryAction = {
+      label: 'Configure & Apply Terraform',
+      to: `/services/${id}/terraform-configuration`,
+      icon: 'fa-solid fa-sliders',
+      stageName: 'Step 2: Terraform Config',
+    };
+  }
+
+  const STAGES = [
+    { num: 1, label: 'Setup', done: isTerraformSetupDone },
+    { num: 2, label: 'Config', done: isTerraformApplied },
+    { num: 3, label: 'Docker', done: isDockerized },
+    { num: 4, label: 'CI', done: isCiDone },
+    { num: 5, label: 'K8s', done: Boolean(service.k8s_complete) },
+  ];
 
   return (
-    <div className='service-card' key={id}>
-      <div>
-        <div className='service-title'>{name}</div>
-        <p className='service-label'><strong>Repo Name: </strong> {repoUrl}</p>
-        <p className='service-label'><strong>Branch:</strong> {branch}</p>
+    <div className='service-card service-card--modern'>
+      {/* Header */}
+      <div className='service-card__header'>
+        <div className='service-card__brand'>
+          <div className='service-card__icon-box'>
+            <i className='fa-solid fa-cube' aria-hidden='true' />
+          </div>
+          <div>
+            <h3 className='service-title'>{name}</h3>
+            {repoDisplay !== '—' ? (
+              <p className='service-label'>
+                <i className='fa-brands fa-github service-card__meta-icon' aria-hidden='true' />
+                <span title={service.repository_url}>{repoDisplay}</span>
+                <span className='service-card__branch'> · {branch}</span>
+              </p>
+            ) : (
+              <p className='service-label'>No repository linked</p>
+            )}
+          </div>
+        </div>
+        <StatusBadge
+          status={isTerraformApplied ? 'live' : 'draft'}
+          customLabel={isTerraformApplied ? 'Live' : 'Configuring'}
+          size='sm'
+        />
       </div>
+
+      {/* Visual Pipeline Stage Dots */}
+      <div className='service-card__pipeline-track'>
+        <div className='pipeline-track__label-row'>
+          <span className='pipeline-track__stage-title'>{primaryAction.stageName}</span>
+        </div>
+        <div className='pipeline-track__dots'>
+          {STAGES.map((s, idx) => (
+            <React.Fragment key={s.num}>
+              <div
+                className={`track-dot ${s.done ? 'track-dot--done' : idx === 0 || STAGES[idx - 1]?.done ? 'track-dot--active' : 'track-dot--locked'}`}
+                title={`Step ${s.num}: ${s.label}`}
+              >
+                {s.done ? (
+                  <i className='fa-solid fa-check' aria-hidden='true' />
+                ) : (
+                  <span>{s.num}</span>
+                )}
+              </div>
+              {idx < STAGES.length - 1 && (
+                <div className={`track-line ${s.done ? 'track-line--done' : ''}`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Single Primary Action Button */}
       <div className='service-card__footer'>
-        <Link to={`/services/${id}/terraform-setup`} className='project-button project-button--primary service-deploy-button'>
-          Go through the deployment process
+        <Link to={primaryAction.to} className='project-button project-button--primary service-card__btn'>
+          <span>{primaryAction.label}</span>
+          <i className={primaryAction.icon} aria-hidden='true' />
         </Link>
-
-        {/* <Link
-          className='project-button project-button--primary service-deploy-button'
-          to={`/projects/${projectId}/services/${id}/ci`}
-        >
-          Add CI
-        </Link>
-
-        <Link
-          className='project-button project-button--primary service-deploy-button'
-          to={`/projects/${projectId}/services/${id}/k8s`}
-        >
-          Add K8s
-        </Link> */}
       </div>
     </div>
   );

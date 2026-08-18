@@ -1,11 +1,329 @@
 .terraform-wizard-card {
   max-width: 520px;
-  margin: 24px auto 0;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  margin: var(--space-5) auto 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  border-top: 3px solid #38bdf8;
 }
+
+.terraform-step-title {
+  margin-top: 0;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-lg);
+  font-weight: 800;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.terraform-field-label {
+  display: block;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.terraform-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.terraform-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.terraform-input::placeholder {
+  color: var(--text-muted);
+}
+
+.terraform-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.terraform-readonly-row {
+  margin: var(--space-2) 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+}
+
+.terraform-status-card {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-surface-soft);
+  box-shadow: 0 10px 30px var(--shadow-color);
+}
+
+.terraform-status-card--initializing {
+  border-color: var(--warning);
+}
+
+.terraform-status-card--applying {
+  border-color: var(--accent-solid);
+}
+
+.terraform-status-card--completed {
+  border-color: var(--success);
+  background: var(--pipeline-done-bg);
+}
+
+.terraform-status-card--error {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.terraform-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.terraform-status-title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.terraform-status-badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: var(--bg-surface-soft);
+  border: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.terraform-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-surface-soft);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.terraform-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-gradient);
+  transition: width 0.35s ease;
+}
+
+.terraform-progress-fill--completed {
+  background: linear-gradient(90deg, var(--success-strong), var(--success));
+}
+
+.terraform-status-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-base);
+}
+
+.terraform-error {
+  color: var(--danger);
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
+}
+
+.terraform-success {
+  color: var(--success);
+  margin-top: var(--space-3);
+  font-weight: 600;
+  font-size: var(--font-sm);
+}
+
+.terraform-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.terraform-add-new-button {
+  display: inline-block;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9em;
+}
+
+/* ---- Step tracker ---- */
+.tf-step-tracker {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: var(--space-5);
+  max-width: 560px;
+}
+
+.tf-step-tracker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  position: relative;
+}
+
+.tf-step-tracker__dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--font-sm);
+  font-weight: 700;
+  border: 2px solid;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.tf-step-tracker__label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 72px;
+  transition: color 0.2s ease;
+}
+
+.tf-step-tracker__line {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--pipeline-idle-border);
+  transition: background 0.3s ease;
+}
+
+.tf-step-tracker__line--done {
+  background: var(--pipeline-done-border);
+}
+
+/* -- idle */
+.tf-step-tracker__item--idle .tf-step-tracker__dot {
+  background: var(--pipeline-idle-bg);
+  border-color: var(--pipeline-idle-border);
+  color: var(--text-muted);
+}
+.tf-step-tracker__item--idle .tf-step-tracker__label {
+  color: var(--text-muted);
+}
+
+/* -- current */
+.tf-step-tracker__item--current .tf-step-tracker__dot {
+  background: var(--pipeline-active-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.tf-step-tracker__item--current .tf-step-tracker__label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* -- done */
+.tf-step-tracker__item--done .tf-step-tracker__dot {
+  background: var(--pipeline-done-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+.tf-step-tracker__item--done .tf-step-tracker__label {
+  color: var(--success);
+}
+
+/* ---- Next-step CTA banner ---- */
+.next-step-cta {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--pipeline-done-bg);
+  border: 1px solid var(--pipeline-done-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.next-step-cta__text {
+  font-size: var(--font-sm);
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ---- Callout info / warn ---- */
+.callout {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  font-size: var(--font-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.callout--info {
+  background: var(--callout-info-bg);
+  border-color: var(--callout-info-border);
+  color: var(--accent-2);
+}
+
+.callout--warn {
+  background: var(--callout-warn-bg);
+  border-color: var(--callout-warn-border);
+  color: var(--warning);
+}
+
+.callout__icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  margin-top: 1px;
+}
+
+.callout__body {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.callout__body strong {
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-step-tracker__dot,
+  .tf-step-tracker__label,
+  .tf-step-tracker__line,
+  .terraform-progress-fill,
+  .terraform-input {
+    transition: none;
+  }
+}
+
 
 .terraform-step-title {
   margin-top: 0;

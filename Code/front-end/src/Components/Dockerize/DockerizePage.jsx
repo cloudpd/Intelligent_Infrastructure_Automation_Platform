@@ -1,22 +1,100 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
+import './Dockerize.css';
 import ExistingDockerfileForm from './ExistingDockerfileForm';
 import GenerateDockerfileForm from './GenerateDockerfileForm';
+import Breadcrumb from '../Shared/Breadcrumb';
+import PipelineProgress from '../Shared/PipelineProgress';
+import { baseUrl as API_URL } from '../Shared/baseUrl';
 
 export default function DockerizePage() {
   const { serviceId } = useParams();
+  const navigate = useNavigate();
   const [choice, setChoice] = useState(null); // null | 'existing' | 'generate'
   const [completed, setCompleted] = useState(false);
+  const [service, setService] = useState(null);
+  const [projectId, setProjectId] = useState(() => sessionStorage.getItem(`service_${serviceId}_projectId`));
+
+  useEffect(() => {
+    if (!serviceId) return;
+
+    const currentStage = parseInt(localStorage.getItem(`service_stage_${serviceId}`) || '0', 10);
+    if (currentStage < 2) {
+      navigate(currentStage === 0 ? `/services/${serviceId}/terraform-setup` : `/services/${serviceId}/terraform-configuration`, { replace: true });
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/services/get/${serviceId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const s = data.service || data;
+        if (s) {
+          setService(s);
+          const pId = s.project_id || s.project?.id;
+          if (pId) {
+            setProjectId(pId);
+            sessionStorage.setItem(`service_${serviceId}_projectId`, pId);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to fetch service details:', err));
+  }, [serviceId, navigate]);
+
+  const ciPath = projectId
+    ? `/projects/${projectId}/services/${serviceId}/ci`
+    : `/services/${serviceId}/ci`;
+
+  const projectName = service?.project?.name || 'Project';
+  const serviceName = service?.name || 'Service';
+
+  const handleCompleted = () => {
+    if (serviceId) {
+      localStorage.setItem(`service_stage_${serviceId}`, '3');
+    }
+    setCompleted(true);
+  };
 
   if (completed) {
     return (
       <div className='projects-shell'>
-        <div className='projects-state'>
-          <p>✅ Dockerfile step complete for this service.</p>
-          <Link to={-1} className='project-button project-button--primary'>
-            Back to service
-          </Link>
+        <Breadcrumb crumbs={[
+          { label: 'Home', to: '/home' },
+          { label: 'Projects', to: '/projects' },
+          ...(projectId ? [{ label: projectName, to: `/projects/${projectId}` }] : []),
+          { label: serviceName },
+          { label: 'Dockerize' },
+        ]} />
+
+        <PipelineProgress activeStage={3} serviceId={serviceId} projectId={projectId} />
+
+        <div className='dockerize-completion-card'>
+          <div className='dockerize-completion-card__badge'>
+            <i className='fa-solid fa-circle-check' aria-hidden='true' />
+          </div>
+          <h2 className='dockerize-completion-card__title'>Dockerfile Ready!</h2>
+          <p className='dockerize-completion-card__text'>
+            Your service container configuration has been verified. Next, set up your continuous integration workflow.
+          </p>
+
+          <div className='dockerize-completion-card__actions'>
+            <Link to={ciPath} className='project-button project-button--primary project-button--lg'>
+              <span>Continue to CI Pipeline</span>
+              <i className='fa-solid fa-arrow-right' aria-hidden='true' />
+            </Link>
+            {projectId ? (
+              <Link to={`/projects/${projectId}`} className='project-button project-button--ghost'>
+                Back to service
+              </Link>
+            ) : (
+              <Link to='/projects' className='project-button project-button--ghost'>
+                Back to projects
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -24,32 +102,74 @@ export default function DockerizePage() {
 
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        ...(projectId ? [{ label: projectName, to: `/projects/${projectId}` }] : []),
+        { label: serviceName },
+        { label: 'Dockerize' },
+      ]} />
+
+      <PipelineProgress activeStage={3} serviceId={serviceId} projectId={projectId} />
+
       <header className='projects-header'>
         <div>
-          <h1 className='projects-title'>Dockerfile Setup</h1>
+          <h1 className='projects-title'>Containerize Service</h1>
           <p className='projects-subtitle'>
-            Before deploying, let's make sure your service has a Dockerfile.
+            Set up a Dockerfile for <strong>{serviceName}</strong> to package your code for automated deployments.
           </p>
+        </div>
+        <div>
+          <Link to={`/services/${serviceId}/terraform-configuration`} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back to Config
+          </Link>
         </div>
       </header>
 
       {!choice && (
         <div className='dockerize-choice'>
-          <article
-            className='project-card dockerize-choice-card'
+          <button
+            type='button'
+            className='project-card dockerize-choice-card dockerize-choice-card--existing'
             onClick={() => setChoice('existing')}
           >
-            <p className='project-title'>I already have a Dockerfile</p>
-            <p className='project-label'>My repo already contains one — I just need to tell you where it is.</p>
-          </article>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
+              <div className='dockerize-choice-card__icon dockerize-choice-card__icon--cyan'>
+                <i className='fa-brands fa-docker' aria-hidden='true' />
+              </div>
+              <span className='dockerize-choice-tag dockerize-choice-tag--cyan'>Existing Spec</span>
+            </div>
+            <div>
+              <h3 className='project-title' style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '6px' }}>I already have a Dockerfile</h3>
+              <p className='project-label' style={{ fontSize: '0.92rem', lineHeight: '1.5' }}>Specify the path to an existing Dockerfile inside your repository.</p>
+            </div>
+            <div className='dockerize-choice-card__footer'>
+              <span>Configure Path</span>
+              <i className='fa-solid fa-arrow-right' aria-hidden='true' />
+            </div>
+          </button>
 
-          <article
-            className='project-card dockerize-choice-card'
+          <button
+            type='button'
+            className='project-card dockerize-choice-card dockerize-choice-card--generate'
             onClick={() => setChoice('generate')}
           >
-            <p className='project-title'>I don't have one yet</p>
-            <p className='project-label'>We'll analyze your repo and generate one for you.</p>
-          </article>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '12px' }}>
+              <div className='dockerize-choice-card__icon dockerize-choice-card__icon--purple'>
+                <i className='fa-solid fa-wand-magic-sparkles' aria-hidden='true' />
+              </div>
+              <span className='dockerize-choice-tag dockerize-choice-tag--purple'>Automated Generator</span>
+            </div>
+            <div>
+              <h3 className='project-title' style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '6px' }}>Generate Dockerfile</h3>
+              <p className='project-label' style={{ fontSize: '0.92rem', lineHeight: '1.5' }}>Analyze your application stack and create an optimized Dockerfile.</p>
+            </div>
+            <div className='dockerize-choice-card__footer'>
+              <span>Start Generator</span>
+              <i className='fa-solid fa-arrow-right' aria-hidden='true' />
+            </div>
+          </button>
         </div>
       )}
 
@@ -57,7 +177,7 @@ export default function DockerizePage() {
         <ExistingDockerfileForm
           serviceId={serviceId}
           onBack={() => setChoice(null)}
-          onDone={() => setCompleted(true)}
+          onDone={handleCompleted}
         />
       )}
 
@@ -65,7 +185,7 @@ export default function DockerizePage() {
         <GenerateDockerfileForm
           serviceId={serviceId}
           onBack={() => setChoice(null)}
-          onDone={() => setCompleted(true)}
+          onDone={handleCompleted}
         />
       )}
     </div>

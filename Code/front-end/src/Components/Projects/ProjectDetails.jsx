@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { ServiceCard, ServiceCreateModal } from '../Services';
 import './Projects.css';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
+import StatusBadge from '../Shared/StatusBadge';
 
 
 export default function ProjectDetails() {
@@ -138,15 +140,29 @@ export default function ProjectDetails() {
     
   }, [projectId]);
 
+  const projectName = project?.name || project?.title || 'Project';
+
   return (
     <div className='projects-shell'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        { label: projectName },
+      ]} />
+
       <header className='projects-header'>
         <div>
-          <h1 className='projects-title'>Project details</h1>
-          <p className='projects-subtitle'>Review the full project data and metadata below.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <h1 className='projects-title'>{projectName}</h1>
+            <StatusBadge status='healthy' customLabel='Active' size='md' />
+          </div>
+          <p className='projects-subtitle'>Manage services and launch your deployment pipeline.</p>
         </div>
         <div>
-          <Link to='/projects' className='project-button project-button--ghost'>Back to projects</Link>
+          <Link to='/projects' className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back to projects
+          </Link>
         </div>
       </header>
 
@@ -167,29 +183,44 @@ export default function ProjectDetails() {
           <div className='service-section__header'>
             <div>
               <h2 className='projects-title'>Services</h2>
-              <p className='projects-subtitle'>Add and deploy services for this project.</p>
+              <p className='projects-subtitle'>Services and infrastructure components in this project.</p>
             </div>
-            <button type='button' className='project-button project-button--ghost' onClick={openServiceModal}>
-              Add service
-            </button>
-          </div>
-
-          <div className='service-grid'>
-            <article className='project-card project-card--new project-card--new-action service-add-card' onClick={openServiceModal}>
-              <p className='plus-mark'>+</p>
-              <p className='project-title'>Add a new service</p>
-            </article>
-
-            {projectServices.length > 0 ? (
-              projectServices.map((service) => (
-                <ServiceCard key={service.id || service._id} service={service} />
-              ))
-            ) : (
-              <div className='projects-state'>
-                <p>No services yet. Add your first service to deploy your app.</p>
-              </div>
+            {projectServices.length > 0 && (
+              <button type='button' className='project-button project-button--primary' onClick={openServiceModal}>
+                <i className='fa-solid fa-plus' aria-hidden='true' style={{ marginRight: '6px' }} />
+                Add service
+              </button>
             )}
           </div>
+
+          {projectServices.length > 0 ? (
+            <div className='service-grid'>
+              <article className='project-card project-card--new project-card--new-action service-add-card' onClick={openServiceModal}>
+                <p className='plus-mark'>+</p>
+                <p className='project-title'>Add a new service</p>
+              </article>
+
+              {projectServices.map((service) => (
+                <ServiceCard
+                  key={service.id || service._id}
+                  service={service}
+                  projectId={projectId}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className='projects-state projects-state--empty-hero'>
+              <div className='empty-hero__icon'>
+                <i className='fa-solid fa-layer-group' aria-hidden='true' />
+              </div>
+              <h3 className='empty-hero__title'>No services in this project yet</h3>
+              <p className='empty-hero__subtitle'>Connect your repository and launch your infrastructure pipeline in minutes.</p>
+              <button type='button' className='project-button project-button--primary project-button--lg' onClick={openServiceModal}>
+                <i className='fa-solid fa-plus' aria-hidden='true' style={{ marginRight: '6px' }} />
+                Create your first service
+              </button>
+            </div>
+          )}
         </section>
       )}
 

@@ -206,18 +206,21 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
   // Belt-and-suspenders: creation time already prevents a service from
   // having both an EksCluster and a VmDeployment row (see
   // eks.service.js#assertNoVmDeployment / vm.service.js#assertNoEksCluster).
-  // This just makes sure the generator itself never silently renders both
-  // compute modules into the same main.tf if that invariant is ever
-  // violated some other way (direct DB write, future admin tooling, etc.).
+  // If that invariant is violated (direct DB write, legacy data, etc.) we
+  // prefer the VM config (the user's current intent) and discard the stale
+  // EKS row rather than throwing — a 409 here would leave the user blocked
+  // with no self-service recovery path.
+  let resolvedEksConfig = eksConfig;
   if (eksConfig && vmConfig) {
-    throw new AppError(
-      'This service has both an EKS cluster and a VM deployment configured. A service can only use one compute option — delete one before generating Terraform files.',
-      409
+    console.warn(
+      `[terraform.service] Service has both an EKS cluster and a VM deployment in the DB ` +
+      `(serviceSlug=${serviceSlug}). Treating EKS config as stale and generating VM-only files.`
     );
+    resolvedEksConfig = null;
   }
 
   const awsRegion =
-    (eksConfig && eksConfig.region) ||
+    (resolvedEksConfig && resolvedEksConfig.region) ||
     (vmConfig && vmConfig.region) ||
     (ecrConfig && ecrConfig.region) ||
     networkConfig.region;
@@ -228,31 +231,33 @@ function generateServiceFiles({ serviceSlug, environment, networkConfig, ecrConf
     awsRegion,
     stateBucket: stateBucketOverride,
     lockTable: lockTableOverride,
-    eksEnabled: Boolean(eksConfig),
+    // Never include the Kubernetes provider when a VM is being deployed,
+    // even if a stale EKS row somehow survived the creation-time guard.
+    eksEnabled: Boolean(resolvedEksConfig) && !vmConfig,
   };
 
   const files = {};
   files['backend.tf'] = buildBackendTf(templateData);
   files['providers.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'providers.tf'), templateData);
   files['versions.tf'] = renderTemplate(path.join(TEMPLATE_DIR, 'versions.tf'), templateData);
-  files['variables.tf'] = generateVariablesTf({ eksEnabled: Boolean(eksConfig) });
+  files['variables.tf'] = generateVariablesTf({ eksEnabled: Boolean(resolvedEksConfig) });
 
   files['outputs.tf'] =
     generateOutputsTf('network') +
     (ecrConfig ? generateOutputsTf('ecr') : '') +
-    (eksConfig ? generateOutputsTf('eks') : '') +
+    (resolvedEksConfig ? generateOutputsTf('eks') : '') +
     (vmConfig ? generateOutputsTf('vm') : '');
 
   files['main.tf'] = generateMainTf({
-    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, eksConfig) },
+    network: { ...networkConfig, serviceSlug, environment, azCount: resolveAzCount(networkConfig, resolvedEksConfig) },
     ecr: ecrConfig ? { ...ecrConfig, serviceSlug, environment } : undefined,
-    eks: eksConfig ? { ...eksConfig, serviceSlug, environment } : undefined,
+    eks: resolvedEksConfig ? { ...resolvedEksConfig, serviceSlug, environment } : undefined,
     vm: vmConfig ? { ...vmConfig, serviceSlug, environment } : undefined,
   });
 
   files['terraform.tfvars'] =
     `aws_region = "${awsRegion}"\n` +
-    (eksConfig ? `grafana_admin_password = "${eksConfig.grafanaAdminPassword}"\n` : '');
+    (resolvedEksConfig ? `grafana_admin_password = "${resolvedEksConfig.grafanaAdminPassword}"\n` : '');
 
   return files;
 }
@@ -278,7 +283,7 @@ function writeToDisk(outputDir, files, { includeNetwork = false, includeEcr = fa
     );
   }
   if (includeVm) {
-      copyDir(path.join(TEMPLATE_DIR, 'modules', 'vm'),
+    copyDir(path.join(TEMPLATE_DIR, 'modules', 'vm'),
       path.join(outputDir, 'modules', 'vm')
     );
   }
@@ -297,7 +302,7 @@ async function applyGeneratedFiles({ outputDir, awsAccessKeyId, awsSecretAccessK
     AWS_DEFAULT_REGION: awsRegion,
   };
 
-  await run(['init', '-input=false'], { cwd: outputDir, env });
+  await run(['init', '-reconfigure', '-input=false'], { cwd: outputDir, env });
   await run(['apply', '-auto-approve', '-input=false'], { cwd: outputDir, env });
 
   const { stdout } = await run(['output', '-json'], { cwd: outputDir, env });

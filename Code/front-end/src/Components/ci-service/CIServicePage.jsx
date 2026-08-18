@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './ci-service.css';
 import SecretForm from './SecretForm';
 import CIForm from './CIForm';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
+import PipelineProgress from '../Shared/PipelineProgress';
 
 
 export default function CIServicePage() {
     const { projectId, serviceId } = useParams();
+    const navigate = useNavigate();
     const [service, setService] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -72,9 +75,14 @@ export default function CIServicePage() {
         }
 
         if (serviceId) {
+            const currentStage = parseInt(localStorage.getItem(`service_stage_${serviceId}`) || '0', 10);
+            if (currentStage < 3) {
+                navigate(`/services/${serviceId}/dockerize`, { replace: true });
+                return;
+            }
             loadService();
         }
-    }, [authHeaders, serviceId]);
+    }, [authHeaders, serviceId, navigate]);
 
     const clearFieldError = (field) => {
         setFieldErrors((prev) => {
@@ -253,6 +261,9 @@ export default function CIServicePage() {
             console.log(data);
             if (!response.ok) throw new Error(data?.message || 'Unable to push workflow.');
             setStatusMessage('Workflow pushed to GitHub.');
+            if (serviceId) {
+                localStorage.setItem(`service_stage_${serviceId}`, '4');
+            }
         } catch (err) {
             setError(err.message || 'Unable to push workflow.');
         } finally {
@@ -297,17 +308,47 @@ export default function CIServicePage() {
         }
     };
 
+    const effectiveProjectId = projectId || service?.project_id || service?.project?.id;
+    const k8sTargetUrl = effectiveProjectId
+      ? `/projects/${effectiveProjectId}/services/${serviceId}/k8s`
+      : `/services/${serviceId}/k8s`;
+
     return (
         <div className='projects-shell'>
+            <Breadcrumb crumbs={[
+              { label: 'Home', to: '/home' },
+              { label: 'Projects', to: '/projects' },
+              ...(effectiveProjectId ? [{ label: service?.project?.name || 'Project', to: `/projects/${effectiveProjectId}` }] : []),
+              ...(service?.name ? [{ label: service.name }] : []),
+              { label: 'CI Pipeline' },
+            ]} />
+
+            <PipelineProgress activeStage={4} serviceId={serviceId} projectId={effectiveProjectId} />
+
             <header className='projects-header'>
                 <div>
-                    <h1 className='projects-title'>CI & Secrets Setup</h1>
-                    <p className='projects-subtitle'>Add your registry secrets first, then configure the CI workflow for {service?.name || 'this service'}.</p>
+                    <h1 className='projects-title'>CI &amp; Secrets Setup</h1>
+                    <p className='projects-subtitle'>Configure the CI workflow for {service?.name || 'this service'}.</p>
                 </div>
-                <div className='ci-actions'>
-                    <Link to={projectId ? `/projects/${projectId}` : '/projects'} className='project-button project-button--ghost'>Back to project</Link>
+                <div className='ci-actions' style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <Link to={`/services/${serviceId}/dockerize`} className='project-button project-button--ghost'>
+                      <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+                      Back to Dockerize
+                    </Link>
+                    <Link to={effectiveProjectId ? `/projects/${effectiveProjectId}` : '/projects'} className='project-button project-button--ghost'>
+                      Back to project
+                    </Link>
                 </div>
             </header>
+
+            {/* GitHub token warning */}
+            <div className='callout callout--info' style={{ marginBottom: 'var(--space-4)' }}>
+              <i className='fa-brands fa-github callout__icon' aria-hidden='true' />
+              <div className='callout__body'>
+                <strong>GitHub token required</strong> — pushing workflows uses your saved PAT.
+                {' '}<Link to='/github-tokens' className='auth-link' style={{ fontSize: 'inherit' }}>Manage tokens →</Link>
+              </div>
+            </div>
 
             {loading ? (
                 <div className='projects-state'>Loading service data...</div>
@@ -345,7 +386,26 @@ export default function CIServicePage() {
                 </div>
             )}
 
-            {statusMessage && <div className='ci-status'>{statusMessage}</div>}
+            {statusMessage && (
+              <>
+                <div className='ci-status'>{statusMessage}</div>
+                {/* Next step CTA */}
+                {serviceId && (
+                  <div className='next-step-cta' style={{ marginTop: 'var(--space-4)' }}>
+                    <span className='next-step-cta__text'>
+                      <i className='fa-solid fa-circle-check' style={{ marginRight: '6px' }} aria-hidden='true' />
+                      CI workflow pushed! Next step: configure Kubernetes.
+                    </span>
+                    <Link
+                      to={k8sTargetUrl}
+                      className='project-button project-button--primary'
+                    >
+                      Configure Kubernetes <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
 
             {showPreviewModal && (
                 <div className='ci-modal-overlay' onClick={() => setShowPreviewModal(false)}>

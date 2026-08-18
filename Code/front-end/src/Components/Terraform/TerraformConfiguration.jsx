@@ -9,6 +9,8 @@ import VmDeploymentForm from './components/VmDeploymentForm';
 import EksClusterForm from './components/EksClusterForm';
 import TerraformActions from './components/TerraformActions';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
+import PipelineProgress from '../Shared/PipelineProgress';
 
 
 export default function TerraformConfiguration() {
@@ -17,6 +19,11 @@ export default function TerraformConfiguration() {
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
+  const serviceSlug = useMemo(() => {
+    const rawName = state?.serviceName || state?.service?.name || serviceId || 'service';
+    return String(rawName).toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'service';
+  }, [state, serviceId]);
 
   const [deploymentType, setDeploymentType] = useState('');
   const [savingDeployment, setSavingDeployment] = useState(false);
@@ -131,7 +138,7 @@ export default function TerraformConfiguration() {
       const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
+        body: JSON.stringify({ serviceId, serviceSlug, environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -169,7 +176,7 @@ export default function TerraformConfiguration() {
       const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
+        body: JSON.stringify({ serviceId, serviceSlug, environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -317,7 +324,7 @@ export default function TerraformConfiguration() {
       const res = await fetch(`${API_URL}/terraform/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ serviceId, serviceSlug: 'service', environment: 'dev' }),
+        body: JSON.stringify({ serviceId, serviceSlug, environment: 'dev' }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
@@ -361,13 +368,18 @@ export default function TerraformConfiguration() {
       : `${API_URL}/infra/vm/vms/${resourceId}`;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const res = await fetch(url, { headers: authHeaders });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
-
-      const resource = data.data || data;
-      if (resource.status && resource.status !== 'applying') {
-        return resource;
+      try {
+        const res = await fetch(url, { headers: authHeaders });
+        const data = await res.json().catch(() => null);
+        if (res.ok) {
+          const resource = data.data || data;
+          if (resource.status && resource.status !== 'applying') {
+            return resource;
+          }
+        }
+      } catch (err) {
+        // Silently swallow transient network fetch hiccups during long apply polling
+        console.warn(`Polling attempt ${attempt + 1} network hiccup, retrying...`, err);
       }
 
       await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
@@ -453,7 +465,7 @@ export default function TerraformConfiguration() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          serviceSlug: 'service',
+          serviceSlug,
           environment: 'dev',
           awsCredentialId: state.awsCredentialId,
           ...(deploymentType === 'eks' ? { clusterId: target.id } : { vmId: target.id }),
@@ -495,11 +507,17 @@ export default function TerraformConfiguration() {
       setApplyPhase('completed');
       setApplyProgress(100);
       setActionSuccess('Terraform apply completed successfully. Your infrastructure is now running.');
+      if (serviceId) {
+        localStorage.setItem(`service_stage_${serviceId}`, '2');
+      }
       fetchState();
     } catch (err) {
       setApplyPhase('error');
       setApplyProgress(0);
-      setActionError(err.message || 'Could not apply Terraform files.');
+      const friendlyMsg = err?.message === 'Failed to fetch'
+        ? 'Unable to connect to the backend server (http://localhost:5000). Please check your backend process status.'
+        : err?.message || 'Could not apply Terraform files.';
+      setActionError(friendlyMsg);
     } finally {
       window.clearInterval(progressTimer);
       setApplying(false);
@@ -510,6 +528,14 @@ export default function TerraformConfiguration() {
 
   return (
     <div className='projects-shell min-vh-100'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        { label: 'Terraform Configuration' },
+      ]} />
+
+      <PipelineProgress activeStage={2} serviceId={serviceId} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Terraform Configuration</h1>
@@ -517,6 +543,7 @@ export default function TerraformConfiguration() {
         </div>
         <div>
           <Link to={`/services/${serviceId}/terraform-setup`} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
             Back to setup
           </Link>
         </div>
@@ -578,6 +605,22 @@ export default function TerraformConfiguration() {
             onGenerate={handleGenerate}
             onApply={handleApply}
           />
+
+          {/* Next-step CTA after successful apply */}
+          {applyPhase === 'completed' && (
+            <div className='next-step-cta'>
+              <span className='next-step-cta__text'>
+                <i className='fa-solid fa-circle-check' style={{ marginRight: '6px' }} aria-hidden='true' />
+                Infrastructure is live! Next: set up your Dockerfile.
+              </span>
+              <Link
+                to={`/services/${serviceId}/dockerize`}
+                className='project-button project-button--primary'
+              >
+                Dockerize <i className='fa-solid fa-arrow-right' aria-hidden='true' style={{ marginLeft: '4px' }} />
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

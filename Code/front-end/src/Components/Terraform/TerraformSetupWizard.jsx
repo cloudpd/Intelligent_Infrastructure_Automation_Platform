@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import '../Projects/Projects.css';
 import './Terraform.css';
 import { baseUrl as API_URL } from '../Shared/baseUrl';
+import Breadcrumb from '../Shared/Breadcrumb';
 
 
 export default function TerraformSetupWizard() {
@@ -309,6 +310,9 @@ export default function TerraformSetupWizard() {
       if (!res.ok) {
         throw new Error(data?.message || `Request failed with status ${res.status}`);
       }
+      if (serviceId) {
+        localStorage.setItem(`service_stage_${serviceId}`, '1');
+      }
       navigate(`/services/${serviceId}/terraform-configuration`);
     } catch (err) {
       setError(err.message || 'Could not save Terraform setup.');
@@ -322,14 +326,51 @@ export default function TerraformSetupWizard() {
     setNetworkForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const STEP_LABELS = ['AWS Credentials', 'Terraform Backend', 'Container Registry', 'Network'];
+
   return (
     <div className='projects-shell min-vh-100'>
+      <Breadcrumb crumbs={[
+        { label: 'Home', to: '/home' },
+        { label: 'Projects', to: '/projects' },
+        { label: 'Terraform Setup' },
+      ]} />
+
       <header className='projects-header'>
         <div>
           <h1 className='projects-title'>Terraform Setup Wizard</h1>
-          <p className='projects-subtitle'>Step {step} of 4</p>
+          <p className='projects-subtitle'>Step {step} of 4 — {STEP_LABELS[step - 1]}</p>
+        </div>
+        <div>
+          <Link to={-1} className='project-button project-button--ghost'>
+            <i className='fa-solid fa-arrow-left' style={{ marginRight: '6px' }} aria-hidden='true' />
+            Back
+          </Link>
         </div>
       </header>
+
+      {/* Visual step tracker */}
+      <div className='tf-step-tracker' role='list' aria-label='Setup steps'>
+        {STEP_LABELS.map((label, idx) => {
+          const n = idx + 1;
+          const isCurrent = n === step;
+          const isDone    = n < step;
+          return (
+            <div
+              key={label}
+              className={`tf-step-tracker__item${isDone ? ' tf-step-tracker__item--done' : isCurrent ? ' tf-step-tracker__item--current' : ' tf-step-tracker__item--idle'}`}
+              role='listitem'
+              aria-current={isCurrent ? 'step' : undefined}
+            >
+              <div className='tf-step-tracker__dot'>
+                {isDone ? <i className='fa-solid fa-check' aria-hidden='true' /> : n}
+              </div>
+              <span className='tf-step-tracker__label'>{label}</span>
+              {idx < STEP_LABELS.length - 1 && <div className={`tf-step-tracker__line${isDone ? ' tf-step-tracker__line--done' : ''}`} aria-hidden='true' />}
+            </div>
+          );
+        })}
+      </div>
 
       <div className='terraform-wizard-card'>
         {step === 1 && (
