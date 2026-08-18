@@ -12,6 +12,11 @@ pipeline {
         FRONT_IMAGE  = "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-front"
         BACK_IMAGE   = "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-back"
 
+        // ECR-specific settings. ECR_REGISTRY is the host portion of
+        // FRONT_IMAGE/BACK_IMAGE - used for `docker login`.
+        AWS_REGION   = "eu-north-1"
+        ECR_REGISTRY = "997206200726.dkr.ecr.eu-north-1.amazonaws.com"
+
         DEV_VALUES   = "Helm/devops-app/dev-values.yml"
         TEST_VALUES  = "Helm/devops-app/test-values.yml"
         PROD_VALUES  = "Helm/devops-app/prod-values.yml"
@@ -115,6 +120,26 @@ pipeline {
         // CD - dev: the ONLY place images get built. Real merge/push to dev
         // (not a PR). Build once here, scan, push, and everything downstream
         // (test, prod) just promotes this exact tag.
+        //
+        // ECR auth: unlike Docker Hub, ECR doesn't take a static
+        // username/password. We fetch a short-lived token via the AWS CLI
+        // and feed it to `docker login`. Requires:
+        //   1) two Jenkins credentials of type "Secret text":
+        //      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, from an IAM
+        //      user with ecr:GetAuthorizationToken,
+        //      ecr:BatchCheckLayerAvailability, ecr:InitiateLayerUpload,
+        //      ecr:UploadLayerPart, ecr:CompleteLayerUpload, ecr:PutImage
+        //      on the gp-front / gp-back repos. Note: this only works with
+        //      a long-lived IAM user's keys, not temporary/STS credentials
+        //      (no session token is passed through).
+        //   2) the `aws` CLI installed on agent-1.
+        //   3) the ECR repos (gp-front, gp-back) must already exist -
+        //      unlike Docker Hub, ECR does not auto-create them on push.
+        //
+        // Alternative (often simpler if agent-1 runs on EC2): attach an IAM
+        // instance role with the same permissions to the agent instead, and
+        // drop the withCredentials block entirely - `aws ecr get-login-password`
+        // will use the instance role automatically.
         // =====================================================================
 
         stage('Build, Scan & Push - Front [dev]') {
@@ -128,9 +153,12 @@ pipeline {
                         -v ${WORKSPACE}/.trivy-cache:/tmp/.cache -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
                         aquasec/trivy:latest image --exit-code 1 --severity CRITICAL --format table ${FRONT_IMAGE}:${IMAGE_TAG}
                 """
-                withCredentials([usernamePassword(credentialsId: 'DOCKERHUB_CREDENTIALS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
                     sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${FRONT_IMAGE}:${IMAGE_TAG}
                     """
                 }
@@ -148,9 +176,12 @@ pipeline {
                       -v ${WORKSPACE}/.trivy-cache:/tmp/.cache -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
                       aquasec/trivy:latest image --exit-code 1 --severity CRITICAL --format table ${BACK_IMAGE}:${IMAGE_TAG}|| true
                 """
-                withCredentials([usernamePassword(credentialsId: 'DOCKERHUB_CREDENTIALS', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
                     sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${BACK_IMAGE}:${IMAGE_TAG}
                     """
                 }
@@ -175,27 +206,7 @@ pipeline {
             when { allOf { branch 'test'; not { changeRequest() } } }
             agent { label "agent-1" }
             steps {
-                script {
-                    echo "Reading image tag(s) already built & validated on dev from ${DEV_VALUES}, promoting into ${TEST_VALUES} (no rebuild)"
-                }
-                sh """
-                    docker run --rm -v \${WORKSPACE}:/w -w /w --entrypoint sh mikefarah/yq:latest -c '
-                        FRONT_TAG=\$(yq ".front-chart.image.tag" ${DEV_VALUES})
-                        BACK_TAG=\$(yq ".back-chart.image.tag" ${DEV_VALUES})
-                        yq -i ".front-chart.image.tag = \\"\$FRONT_TAG\\"" ${TEST_VALUES}
-                        yq -i ".back-chart.image.tag = \\"\$BACK_TAG\\"" ${TEST_VALUES}
-                    '
-                """
-                withCredentials([usernamePassword(credentialsId: 'GIT_REPO_CREDENTIALS', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                    sh """
-                        git config user.email "jenkins-ci@pipeline"
-                        git config user.name "jenkins-ci"
-                        git add ${TEST_VALUES}
-                        git commit -m "promote dev image tag(s) -> ${TEST_VALUES} [ci skip]" || echo "nothing to commit"
-                        git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git test
-                        git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:test
-                    """
-                }
+                gitOpsPromoteTag(env.DEV_VALUES, env.TEST_VALUES, 'test')
                 echo "test-values.yml updated. ArgoCD (auto-sync on test) will pick this up and deploy."
             }
         }
@@ -247,6 +258,7 @@ pipeline {
         // =====================================================================
         // CD - prod: merge to main. NO build, NO scan - promote the exact
         // tag(s) that were validated on test, but only after a human approves.
+        // Just a straight tag copy - same style as dev/test, no canary.
         // ArgoCD prod app is manual-sync, so this stage only prepares the
         // commit; a human still clicks Sync in the ArgoCD UI afterwards.
         // =====================================================================
@@ -258,7 +270,7 @@ pipeline {
                 script {
                     def decision = input(
                         id: 'prodApproval',
-                        message: 'Promote the tested image tag(s) from test-values.yml to PRODUCTION (canary 10%)?',
+                        message: 'Promote the tested image tag(s) from test-values.yml to PRODUCTION?',
                         parameters: [choice(name: 'ACTION', choices: ['Approve', 'Abort'], description: 'Approve to proceed, Abort to stop the pipeline here')]
                     )
                     if (decision == 'Abort') {
@@ -272,36 +284,8 @@ pipeline {
             when { allOf { branch 'main'; not { changeRequest() } } }
             agent { label "agent-1" }
             steps {
-                script {
-                    echo "Reading last validated image tags from ${TEST_VALUES} and enabling canary in ${PROD_VALUES}"
-                }
-                sh """
-                    docker run --rm -v \${WORKSPACE}:/w -w /w --entrypoint sh mikefarah/yq:latest -c '
-                        FRONT_TAG=\$(yq ".front-chart.image.tag" ${TEST_VALUES})
-                        BACK_TAG=\$(yq ".back-chart.image.tag" ${TEST_VALUES})
-                        yq -i "
-                            .global.front_canary_enabled = true |
-                            .global.front_canary_image.tag = \\"\$FRONT_TAG\\" |
-                            .global.front_canary_weight.stable = 90 |
-                            .global.front_canary_weight.canary = 10 |
-                            .global.back_canary_enabled = true |
-                            .global.back_canary_image.tag = \\"\$BACK_TAG\\" |
-                            .global.back_canary_weight.stable = 90 |
-                            .global.back_canary_weight.canary = 10
-                        " ${PROD_VALUES}
-                    '
-                """
-                withCredentials([usernamePassword(credentialsId: 'GIT_REPO_CREDENTIALS', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                    sh """
-                        git config user.email "jenkins-ci@pipeline"
-                        git config user.name "jenkins-ci"
-                        git add ${PROD_VALUES}
-                        git commit -m "promote ${IMAGE_TAG} from test to prod canary [ci skip]" || echo "nothing to commit"
-                        git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git main
-                        git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:main
-                    """
-                }
-                echo "prod-values.yml updated with new canary tag/weights. Go to ArgoCD UI -> devops-app (prod) -> click Sync to apply."
+                gitOpsPromoteTag(env.TEST_VALUES, env.PROD_VALUES, 'main')
+                echo "prod-values.yml updated with new image tag(s). Go to ArgoCD UI -> devops-app (prod) -> click Sync to apply."
             }
         }
 
@@ -315,9 +299,10 @@ pipeline {
 }
 
 // ---------------------------------------------------------------------------
-// Shared step: bump the built image tag(s) into the given env values file
-// and push the commit back to this same repo (ArgoCD watches it for changes).
-// Only used on dev, where FRONT_CHANGED/BACK_CHANGED reflect an actual build.
+// Shared step (dev only): bump the image tag(s) that were JUST built in this
+// run into the given values file. Conditional on FRONT_CHANGED/BACK_CHANGED
+// and always writes env.IMAGE_TAG. Pushes back to whatever branch triggered
+// the build (env.BRANCH_NAME).
 // ---------------------------------------------------------------------------
 def gitOpsBumpTag(String valuesFile) {
     if (env.FRONT_CHANGED == 'true') {
@@ -338,7 +323,35 @@ def gitOpsBumpTag(String valuesFile) {
             git config user.name "jenkins-ci"
             git add ${valuesFile}
             git commit -m "build ${env.IMAGE_TAG} -> ${valuesFile} [ci skip]" || echo "nothing to commit"
-            git push https://\$GIT_USER:\$GIT_TOKEN@git@github.com:cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:${env.BRANCH_NAME}
+            git push https://\$GIT_USER:\$GIT_TOKEN@github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:${env.BRANCH_NAME}
+        """
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shared step (test & prod): promote whatever tag(s) already exist in
+// sourceFile straight into targetFile - no build, no env.IMAGE_TAG involved.
+// Used by dev->test and test->prod. Unconditional (always copies both
+// front/back tags), since the source file already reflects only what was
+// actually built and validated upstream.
+// ---------------------------------------------------------------------------
+def gitOpsPromoteTag(String sourceFile, String targetFile, String targetBranch) {
+    sh """
+        docker run --rm -v \${WORKSPACE}:/w -w /w --entrypoint sh mikefarah/yq:latest -c '
+            FRONT_TAG=\$(yq ".front-chart.image.tag" ${sourceFile})
+            BACK_TAG=\$(yq ".back-chart.image.tag" ${sourceFile})
+            yq -i ".front-chart.image.tag = \\"\$FRONT_TAG\\"" ${targetFile}
+            yq -i ".back-chart.image.tag = \\"\$BACK_TAG\\"" ${targetFile}
+        '
+    """
+    withCredentials([usernamePassword(credentialsId: 'GIT_REPO_CREDENTIALS', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+        sh """
+            git config user.email "jenkins-ci@pipeline"
+            git config user.name "jenkins-ci"
+            git add ${targetFile}
+            git commit -m "promote tag(s) from ${sourceFile} -> ${targetFile} [ci skip]" || echo "nothing to commit"
+            git pull --rebase https://\$GIT_USER:\$GIT_TOKEN@github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git ${targetBranch}
+            git push https://\$GIT_USER:\$GIT_TOKEN@github.com/cloudpd/Intelligent_Infrastructure_Automation_Platform.git HEAD:${targetBranch}
         """
     }
 }
