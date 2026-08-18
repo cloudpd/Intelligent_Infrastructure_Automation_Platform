@@ -11,11 +11,9 @@ export default function DockerizePage() {
   const { serviceId } = useParams();
   const [choice,    setChoice]    = useState(null); // null | 'existing' | 'generate'
   const [completed, setCompleted] = useState(false);
-  const [projectId, setProjectId] = useState(null);
 
-  // Attempt to extract projectId from state or sessionStorage (set by service navigation)
-  // CI and K8s routes need it — if not available the links gracefully degrade in ServiceCard
-  const storedProjectId = projectId || sessionStorage.getItem(`service_${serviceId}_projectId`);
+  // Attempt to extract projectId from sessionStorage (set by service navigation)
+  const projectId = sessionStorage.getItem(`service_${serviceId}_projectId`);
 
   if (completed) {
     return (
@@ -33,9 +31,9 @@ export default function DockerizePage() {
           <p style={{ color: 'var(--success)', fontWeight: 700 }}>Dockerfile step complete!</p>
           <p className='projects-state__hint'>Your service is now containerised. Set up your CI pipeline next.</p>
           <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {storedProjectId && (
+            {projectId && (
               <Link
-                to={`/projects/${storedProjectId}/services/${serviceId}/ci`}
+                to={`/projects/${projectId}/services/${serviceId}/ci`}
                 className='project-button project-button--primary'
               >
                 Set up CI Pipeline

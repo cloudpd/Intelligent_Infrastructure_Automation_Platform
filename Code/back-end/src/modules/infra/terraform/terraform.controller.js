@@ -286,6 +286,8 @@ async function generateServiceFiles(req, res, next) {
       vmService.getGeneratorConfigForService(req.user.id, serviceId, { serviceSlug: resolvedSlug, environment }),
     ]);
 
+    const effectiveEksConfig = (eksConfig && vmConfig) ? null : eksConfig;
+
     const files = terraformService.generateServiceFiles({
       serviceSlug: resolvedSlug,
       environment,
@@ -302,7 +304,7 @@ async function generateServiceFiles(req, res, next) {
     terraformService.writeToDisk(outputDir, files, {
       includeNetwork: true,
       includeEcr: Boolean(ecrConfig),
-      includeEks: Boolean(eksConfig),
+      includeEks: Boolean(effectiveEksConfig),
       includeVm: Boolean(vmConfig),
     });
 
@@ -313,7 +315,7 @@ async function generateServiceFiles(req, res, next) {
       modules: {
         network: true,
         ecr: Boolean(ecrConfig),
-        eks: Boolean(eksConfig),
+        eks: Boolean(effectiveEksConfig),
         vm: Boolean(vmConfig),
       },
     });
