@@ -48,7 +48,7 @@ export default function DockerizePage() {
             onClick={() => setChoice('generate')}
           >
             <p className='project-title'>I don't have one yet</p>
-            <p className='project-label'>Pick your language and we'll generate one for you.</p>
+            <p className='project-label'>We'll analyze your repo and generate one for you.</p>
           </article>
         </div>
       )}

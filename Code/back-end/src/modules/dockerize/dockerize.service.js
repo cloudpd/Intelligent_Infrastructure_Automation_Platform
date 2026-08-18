@@ -93,4 +93,4 @@ async function getBuildConfigForService(userId, serviceId) {
   return config;
 }
 
-module.exports = { markExistingDockerfile, generateAndPushDockerfile, getBuildConfigForService };
+module.exports = { markExistingDockerfile, generateAndPushDockerfile, getBuildConfigForService, getServiceOwnedByUser };

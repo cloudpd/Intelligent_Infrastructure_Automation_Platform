@@ -178,6 +178,17 @@ async function pushFileToRepo({ accessToken, owner, repo, path, content, branch,
   return response.json();
 }
 
+async function getFileContent({ accessToken, owner, repo, path, branch }) {
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+  const res = await fetch(apiUrl, {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github+json' },
+  });
+  if (res.status === 404) return null; // file doesn't exist — not an error, just a signal
+  if (!res.ok) throw new AppError('Failed to read file from GitHub', res.status);
+  const data = await res.json();
+  return Buffer.from(data.content, 'base64').toString('utf8');
+}
+
 module.exports = {
   saveToken,
   listUserTokens,
@@ -189,4 +200,5 @@ module.exports = {
   pushSingleRepoSecret,
   getPatTokenFromDb,
   getServiceById,
+  getFileContent,
 };

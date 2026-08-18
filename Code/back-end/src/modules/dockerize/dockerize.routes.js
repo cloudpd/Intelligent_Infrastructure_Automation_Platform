@@ -7,6 +7,7 @@ const {
   getLanguageDefaultsController,
   generateController,
   getBuildConfigController,
+  suggestController,
 } = require('./dockerize.controller');
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.post('/existing', validate(existingDockerfileSchema), markExistingControl
 router.get('/defaults/:language', getLanguageDefaultsController); // was /template/:language
 router.post('/generate', validate(generateDockerfileSchema), generateController);
 router.get('/build-config/:serviceId', getBuildConfigController);
+router.post('/suggest', suggestController);
 
 module.exports = router;

@@ -39,9 +39,37 @@ async function getBuildConfigController(req, res, next) {
   }
 }
 
+const dockerizeAiService = require('./dockerize.ai.service');
+const githubService = require('../github/github.service');
+
+async function suggestController(req, res, next) {
+  try {
+    const { service_id, github_token_id } = req.body;
+    const service = await dockerizeService.getServiceOwnedByUser(req.user.id, service_id); // reuse existing ownership check
+    if (!service) return next(new AppError('Service not found', 404));
+
+    const accessToken = await githubService.getDecryptedToken(req.user.id, github_token_id);
+    const { owner, repo } = githubService.parseRepoUrl(service.repository_url);
+
+    const [packageJson, requirementsTxt] = await Promise.all([
+      githubService.getFileContent({ accessToken, owner, repo, path: 'package.json', branch: service.branch || 'main' }),
+      githubService.getFileContent({ accessToken, owner, repo, path: 'requirements.txt', branch: service.branch || 'main' }),
+    ]);
+
+    const suggestion = await dockerizeAiService.suggestDockerConfig({
+      packageJson, requirementsTxt, fileList: [packageJson && 'package.json', requirementsTxt && 'requirements.txt'].filter(Boolean),
+    });
+
+    res.status(200).json({ success: true, suggestion }); // frontend pre-fills the form with this — nothing auto-applies
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   markExistingController,
   getLanguageDefaultsController,
   generateController,
   getBuildConfigController,
+  suggestController,
 };
