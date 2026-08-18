@@ -53,13 +53,13 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #38bdf8 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 1.15rem;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.45);
 }
 
 .landing-nav__links {

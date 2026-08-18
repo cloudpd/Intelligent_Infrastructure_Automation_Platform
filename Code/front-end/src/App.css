@@ -37,6 +37,15 @@ body {
     var(--bg-page);
 }
 
+[data-theme='light'] .app-content,
+[data-theme='light'] .projects-shell {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 12%, rgba(168, 85, 247, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(52, 211, 153, 0.06) 0%, transparent 45%),
+    #f8fafc !important;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     flex-direction: column;
@@ -73,13 +82,13 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1 0%, #38bdf8 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #38bdf8 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   font-size: 1.25rem;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.45);
 }
 
 .auth-brand-name {

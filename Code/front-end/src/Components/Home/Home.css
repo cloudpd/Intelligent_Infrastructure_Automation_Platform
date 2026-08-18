@@ -276,3 +276,12 @@
     flex-direction: column;
   }
 }
+
+/* Light Theme Specific Overrides */
+[data-theme='light'] .home-hero-command,
+[data-theme='light'] .metric-tile,
+[data-theme='light'] .home-card-section {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+}

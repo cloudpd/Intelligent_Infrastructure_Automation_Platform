@@ -105,6 +105,53 @@
   }
 }
 
+.dockerize-completion-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Light Theme Specific Overrides */
+[data-theme='light'] .dockerize-choice-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme='light'] .custom-token-trigger {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .custom-token-popover {
+  background: #ffffff !important;
+  border-color: #93c5fd !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+}
+
+[data-theme='light'] .custom-token-popover__header {
+  background: #f1f5f9 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .custom-token-choice-item:hover {
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+[data-theme='light'] .custom-token-choice-title {
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .dockerize-form-panel,
+[data-theme='light'] .dockerize-completion-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+}
+
 .dockerize-suggest-panel {
   display: flex;
   align-items: center;

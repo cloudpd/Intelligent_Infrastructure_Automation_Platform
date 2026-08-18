@@ -71,7 +71,6 @@ export default function Profile() {
                 {userEmail}
               </p>
               <div className='profile-hero__tags'>
-                <StatusBadge status={userRole === 'admin' ? 'healthy' : 'info'} customLabel={userRole} size='sm' />
                 <StatusBadge status='healthy' customLabel='Verified Account' size='sm' />
               </div>
             </div>
@@ -108,10 +107,6 @@ export default function Profile() {
               <div className='profile-field-row'>
                 <span className='profile-field-label'>Workspace Organization</span>
                 <span className='profile-field-value'>Cloud Infrastructure Platform</span>
-              </div>
-              <div className='profile-field-row'>
-                <span className='profile-field-label'>Access Role</span>
-                <span className='profile-code-box'>{userRole}</span>
               </div>
             </div>
           </div>
