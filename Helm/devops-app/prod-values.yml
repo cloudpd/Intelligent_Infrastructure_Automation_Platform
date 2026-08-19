@@ -38,20 +38,16 @@ mysql: # this attribute are waiting for postgresql chart need him to start your 
       size: 8Gi
 ################ end of mysql ################
 
-
 back-chart:
   image:
     repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-back"
-    tag: "latest"
+    tag: "dev-a0b93cd0"
 front-chart:
   image:
     repository: "997206200726.dkr.ecr.eu-north-1.amazonaws.com/gp-front"
-    tag: "latest"
-
-
+    tag: "dev-a0b93cd0"
 global:
   db_host: "mysql-svc"
   backend_host: "back-svc"
   frontend_host: "front-svc"
   hostname: "devops-app.mycloudlab.website"
-
