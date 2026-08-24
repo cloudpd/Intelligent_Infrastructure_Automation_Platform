@@ -170,6 +170,10 @@ async function markFailed(vmId, errorMessage) {
   await VmDeployment.update({ status: 'failed', apply_error: errorMessage }, { where: { id: vmId } });
 }
 
+async function deleteByServiceId(serviceId) {
+  await VmDeployment.destroy({ where: { service_id: serviceId } });
+}
+
 module.exports = {
   createVm,
   listVms,
@@ -182,5 +186,6 @@ module.exports = {
   markApplying,
   markApplied,
   markFailed,
+  deleteByServiceId,
   getOwnedVm
 };

@@ -402,22 +402,11 @@ async function applyEksFiles(req, res, next) {
       serviceSlug,
       environment,
       awsCredentialId,
-      markApplying: async (id) => {
-        const { markApplying: markClusterApplying } = require('../EKS/eks.service');
-        return markClusterApplying(id);
-      },
-      markApplied: async (id, metadata) => {
-        const { markApplied: markClusterApplied } = require('../EKS/eks.service');
-        return markClusterApplied(id, metadata);
-      },
-      markFailed: async (id, error) => {
-        const { markFailed: markClusterFailed } = require('../EKS/eks.service');
-        return markClusterFailed(id, error);
-      },
-      getOwnedResource: async (resourceId, userId) => {
-        const { getOwnedCluster } = require('../EKS/eks.service');
-        return getOwnedCluster(resourceId, userId);
-      },
+      // Cleaned up: Using the already imported eksService
+      markApplying: eksService.markApplying,
+      markApplied: eksService.markApplied,
+      markFailed: eksService.markFailed,
+      getOwnedResource: eksService.getOwnedCluster,
       outputDir: path.join(process.cwd(), 'generated', serviceSlug, environment),
     });
 
@@ -433,35 +422,38 @@ async function applyEksFiles(req, res, next) {
         awsRegion: prepared.resource.region,
       })
       .then(async (outputs) => {
-        // Persist the real ECR URL (includes AWS account ID) from Terraform outputs
-        await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
-
-        // Snapshot exactly what was just applied so Destroy has something
-        // immutable to work from later, regardless of what a subsequent
-        // Generate does to `generated/<slug>/<env>/` afterward.
-        const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, prepared.resource.service_id);
-        await terraformDeploymentService.recordDeployment({
-          serviceId: prepared.resource.service_id,
-          environment,
-          serviceSlug,
-          outputDir,
-          stateBucket,
-          lockTable,
-          awsRegion: prepared.resource.region,
-          awsCredentialId,
+        await eksService.markApplied(clusterId, {
+          clusterEndpoint: outputs.eks_cluster_endpoint?.value,
+          clusterName: outputs.eks_cluster_name?.value,
         });
 
-        return require('../EKS/eks.service').markApplied(clusterId, {
-          clusterEndpoint: outputs.cluster_endpoint?.value,
-          clusterName: outputs.cluster_name?.value,
-        });
+        try {
+          await saveEcrUrlFromOutputs(prepared.resource.service_id, outputs);
+
+          const { stateBucket, lockTable } = await resolveBackendConfig(req.user.id, prepared.resource.service_id);
+          await terraformDeploymentService.recordDeployment({
+            serviceId: prepared.resource.service_id,
+            environment,
+            serviceSlug,
+            outputDir,
+            stateBucket,
+            lockTable,
+            awsRegion: prepared.resource.region,
+            awsCredentialId,
+          });
+        } catch (bookkeepingErr) {
+          console.error(
+            `EKS cluster ${clusterId} applied successfully, but post-apply bookkeeping failed:`,
+            bookkeepingErr.message
+          );
+        }
       })
       .catch((err) => {
         console.error(`Terraform apply failed for EKS cluster ${clusterId}:`, err.message);
-        return require('../EKS/eks.service').markFailed(clusterId, err.message);
+        return eksService.markFailed(clusterId, err.message);
       });
   } catch (err) {
-    next(err);
+    next(err); 
   }
 }
 

@@ -157,6 +157,7 @@ async function generateKubernetesManifests(userId, serviceId, wizard) {
   }
 
   const token = await getPATTokenFromDB(userId, wizard.githubTokenId);
+  console.log('Using GitHub token for user', userId, 'token ID', wizard.githubTokenId);
     // const token =  await githubService.getDecryptedToken(userId, github_token_id);
   const { commitSha, pushed } = await cloneWriteCommitPush({
     repositoryUrl: service.repository_url,

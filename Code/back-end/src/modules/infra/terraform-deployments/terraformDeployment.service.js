@@ -9,6 +9,8 @@ const { TerraformDeployment } = require('./terraformDeployment.model');
 const { copyDir } = require('../terraform/utils/writeFiles');
 const { run } = require('../terraform/utils/execTerraform');
 const awsService = require('../../aws/aws.service');
+const vmService = require('../vm/vm.service');
+const eksService = require('../EKS/eks.service');
 
 const DEPLOYMENTS_ROOT = path.join(process.cwd(), 'deployments');
 const DESTROY_TMP_ROOT = path.join(process.cwd(), 'destroy-tmp');
@@ -265,6 +267,20 @@ async function runDestroy(deployment, creds) {
 
     const deploymentId = deployment.id;
     const serviceId = deployment.service_id;
+
+    // Delete whichever compute module row(s) this deployment actually
+    // included, so vm_deployments / eks_clusters don't leave a leftover
+    // row that would 409 a fresh create attempt once the infra is truly
+    // gone. `modules` was detected from disk when this deployment was
+    // recorded (see detectModules/recordDeployment above), so this only
+    // touches the module(s) that were really part of it.
+    if (deployment.modules?.vm) {
+      await vmService.deleteByServiceId(serviceId);
+    }
+    if (deployment.modules?.eks) {
+      await eksService.deleteByServiceId(serviceId);
+    }
+
     await deployment.destroy(); // hard delete — no 'destroyed' row is kept
 
     // Best-effort: reflect the teardown back on the Setup Wizard's state

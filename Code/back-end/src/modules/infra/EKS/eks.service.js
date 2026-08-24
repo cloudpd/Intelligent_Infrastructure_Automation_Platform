@@ -162,7 +162,22 @@ async function getCluster(userId, clusterId) {
 async function updateCluster(userId, clusterId, data) {
   const cluster = await getOwnedCluster(clusterId, userId);
 
+  // clusterName/region can only change while the cluster is still just a
+  // DB record with no real AWS resources behind it yet. Once apply has
+  // started or finished, changing these would desync Terraform state from
+  // whatever's actually running in AWS (orphaning the old cluster instead
+  // of updating it) — so recreate (delete + create) is required instead.
+  const changingIdentity = data.clusterName !== undefined || data.region !== undefined;
+  if (changingIdentity && (cluster.status === 'applied' || cluster.status === 'applying')) {
+    throw new AppError(
+      'clusterName and region cannot be changed once the cluster has been applied — delete this cluster and create a new one instead.',
+      409
+    );
+  }
+
   const patch = {};
+  if (data.clusterName !== undefined) patch.cluster_name = data.clusterName;
+  if (data.region !== undefined) patch.region = data.region;
   if (data.clusterVersion !== undefined) patch.cluster_version = data.clusterVersion;
   if (data.nodeGroups !== undefined) patch.node_groups = toNodeGroupsColumn(data.nodeGroups);
   if (data.clusterAdmins !== undefined) {
@@ -204,6 +219,10 @@ async function markApplied(clusterId, { clusterEndpoint, clusterName }) {
 
 async function markFailed(clusterId, errorMessage) {
   await EksCluster.update({ status: 'failed', apply_error: errorMessage }, { where: { id: clusterId } });
+}
+
+async function deleteByServiceId(serviceId) {
+  await EksCluster.destroy({ where: { service_id: serviceId } });
 }
 
 /**
@@ -279,4 +298,5 @@ module.exports = {
   markApplying,
   markApplied,
   markFailed,
+  deleteByServiceId,
 };

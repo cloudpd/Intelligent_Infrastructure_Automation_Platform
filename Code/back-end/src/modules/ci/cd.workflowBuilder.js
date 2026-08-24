@@ -3,6 +3,7 @@ const HeaderGenerator = require('./generators/header.generator');
 const TriggerGenerator = require('./generators/trigger.generator');
 const CheckoutStepGenerator = require('./generators/checkout.generator');
 const DeployEksGenerator = require('./generators/deploy-eks.generator');
+const DeployVmGenerator = require('./generators/deploy-vm.generator');
 
 /**
  * CD Workflow Builder
@@ -18,6 +19,8 @@ class CdWorkflowBuilder {
       trigger_branch: rawConfig.trigger_branch || rawConfig.triggerBranch || 'main',
       deploymentType: rawConfig.deploymentType || 'eks',
       eksClusterName: rawConfig.eksClusterName || null,
+      vmInstanceId: rawConfig.vmInstanceId || null,
+      kindClusterName: rawConfig.kindClusterName || 'kind',
     };
   }
 
@@ -49,7 +52,7 @@ class CdWorkflowBuilder {
     const checkoutGen = new CheckoutStepGenerator();
     workflow.jobs.deploy.steps.push(checkoutGen.generate());
 
-    // --- EKS CD DEPLOYMENT ---
+    // --- AWS credentials (needed for both the EKS API and SSM calls) ---
     workflow.jobs.deploy.steps.push({
       name: 'Configure AWS Credentials',
       uses: 'aws-actions/configure-aws-credentials@v4',
@@ -60,8 +63,16 @@ class CdWorkflowBuilder {
       },
     });
 
-    const deployEksGen = new DeployEksGenerator(this.config.eksClusterName);
-    workflow.jobs.deploy.steps.push(...deployEksGen.generate());
+    // --- Deployment target ---
+    if (this.config.deploymentType === 'vm') {
+      // --- VM (KIND-on-EC2) CD DEPLOYMENT, via AWS SSM ---
+      const deployVmGen = new DeployVmGenerator(this.config.vmInstanceId, this.config.kindClusterName);
+      workflow.jobs.deploy.steps.push(...deployVmGen.generate());
+    } else {
+      // --- EKS CD DEPLOYMENT ---
+      const deployEksGen = new DeployEksGenerator(this.config.eksClusterName);
+      workflow.jobs.deploy.steps.push(...deployEksGen.generate());
+    }
 
     return workflow;
   }

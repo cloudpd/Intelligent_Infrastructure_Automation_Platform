@@ -13,6 +13,7 @@ const { BuildConfig } = require('../dockerize/dockerize.model');
 const { Ecr } = require('../infra/ecr/ecr.model');
 const { TerraformState } = require('../infra/terraform-state/terraformState.model');
 const { EksCluster } = require('../infra/EKS/eks.model');
+const { VmDeployment } = require('../infra/vm/vm.model');
 
 const CI_FILE_PATH = ".github/workflows/ci.yml";
 const CD_FILE_PATH = ".github/workflows/cd.yml";
@@ -142,6 +143,23 @@ async function getDeploymentTypeFromDB(serviceId) {
   return cluster ? 'eks' : 'vm';
 }
 
+/**
+ * Look up the applied VM instance's id and KIND cluster name from the
+ * VmDeployment table for this service. instance_id is only populated once
+ * `terraform apply` has actually succeeded (see vm.service.js#markApplied);
+ * before that, the CD generator falls back to ${{ secrets.VM_INSTANCE_ID }}.
+ * @param {string} serviceId
+ * @returns {Promise<{instanceId: string|null, kindClusterName: string}|null>}
+ */
+async function getVmDeploymentFromDB(serviceId) {
+  const vm = await VmDeployment.findOne({ where: { service_id: serviceId } });
+  if (!vm) return null;
+  return {
+    instanceId: vm.instance_id || null,
+    kindClusterName: vm.kind_cluster_name || 'kind',
+  };
+}
+
 async function pushSingleFileToGithub({ token, owner, repo, branch, filePath, yamlContent }) {
   const contentBase64 = Buffer.from(yamlContent).toString('base64');
   const sha = await getFileSha(token, owner, repo, branch, filePath);
@@ -183,7 +201,16 @@ async function pushWorkflowToGithub(userId, serviceId) {
   const ecrRepoName = rawConfig.registry === 'aws-ecr' ? await getEcrRepoNameFromDB(serviceId) : null;
   const eksClusterName = await getEksClusterNameFromDB(serviceId);
   const deploymentType = await getDeploymentTypeFromDB(serviceId);
-  const enrichedConfig = { ...rawConfig, language, ecrRepoName, eksClusterName, deploymentType };
+  const vmDeployment = deploymentType === 'vm' ? await getVmDeploymentFromDB(serviceId) : null;
+  const enrichedConfig = {
+    ...rawConfig,
+    language,
+    ecrRepoName,
+    eksClusterName,
+    deploymentType,
+    vmInstanceId: vmDeployment ? vmDeployment.instanceId : null,
+    kindClusterName: vmDeployment ? vmDeployment.kindClusterName : null,
+  };
 
   const service = await getServiceById(serviceId, userId);
   const { owner, repo } = parseGithubUrl(service.repository_url);
@@ -256,6 +283,7 @@ module.exports = {
   getEcrRepoNameFromDB,
   getEksClusterNameFromDB,
   getDeploymentTypeFromDB,
+  getVmDeploymentFromDB,
   CI_FILE_PATH,
   CD_FILE_PATH,
 };

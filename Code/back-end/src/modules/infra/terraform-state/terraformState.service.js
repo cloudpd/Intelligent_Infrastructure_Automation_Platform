@@ -321,13 +321,13 @@ async function generate(userId, { serviceId, serviceSlug, environment = 'dev' })
  * Terraform or calling AWS directly.
  */
 async function saveEcrUrlFromOutputs(serviceId, outputs) {
-  const ecrUrl = outputs?.ecr_repository_url?.value;
-  if (!ecrUrl) return; // ECR was not part of this apply (e.g. no use_ecr)
-
   const state = await TerraformState.findOne({ where: { service_id: serviceId } });
   if (!state) return;
 
-  state.ecr_url = ecrUrl;
+  const ecrUrl = outputs?.ecr_repository_url?.value;
+  if (ecrUrl) {
+    state.ecr_url = ecrUrl;
+  }
   state.applied = true;
   await state.save();
 }

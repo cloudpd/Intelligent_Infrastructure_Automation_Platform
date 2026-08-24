@@ -42,6 +42,8 @@ const createEksClusterSchema = Joi.object({
 });
 
 const updateEksClusterSchema = Joi.object({
+  clusterName: Joi.string().min(2).max(64).pattern(CLUSTER_NAME_PATTERN),
+  region: Joi.string().pattern(AWS_REGION_PATTERN),
   clusterVersion: Joi.string().max(16),
   nodeGroups: nodeGroupsSchema,
   clusterAdmins: Joi.array().items(clusterAdminSchema).min(1),
@@ -50,8 +52,9 @@ const updateEksClusterSchema = Joi.object({
   enableAlbController: Joi.boolean(),
   enableExternalDns: Joi.boolean(),
   enableExternalSecrets: Joi.boolean(),
-  // clusterName and region are NOT updatable after creation — same rule as
-  // Network's vpc_cidr/region: changing them means a new cluster.
+  // clusterName and region ARE updatable, but only pre-apply — see
+  // eks.service.js#updateCluster, which blocks this once status is
+  // "applied"/"applying" to avoid orphaning real AWS resources.
 }).min(1);
 
 module.exports = { createEksClusterSchema, updateEksClusterSchema };

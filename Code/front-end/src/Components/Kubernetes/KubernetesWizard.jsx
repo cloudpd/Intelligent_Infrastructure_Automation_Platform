@@ -381,6 +381,9 @@ export default function KubernetesWizard() {
               ))}
             </div>
           )}
+          <div>
+            {wizard.githubTokenId}
+          </div>
         </section>
 
         <WizardSummary wizard={wizard} />

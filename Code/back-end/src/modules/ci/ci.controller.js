@@ -3,7 +3,12 @@ const githubService = require('../github/github.service');
 const { validateRepository } = require('./ci.validation');
 const { CIConfig } = require('./ci.model');
 const AppError = require('../../core/utils/AppError');
-const { getEcrRepoNameFromDB, getEksClusterNameFromDB } = require('./ci.service');
+const {
+    getEcrRepoNameFromDB,
+    getEksClusterNameFromDB,
+    getDeploymentTypeFromDB,
+    getVmDeploymentFromDB,
+} = require('./ci.service');
 
 async function getCIConfigController(req, res, next) {
     try {
@@ -122,6 +127,8 @@ async function previewWorkflowController(req, res, next) {
             ? await getEcrRepoNameFromDB(serviceId)
             : null;
         const eksClusterName = await getEksClusterNameFromDB(serviceId);
+        const deploymentType = await getDeploymentTypeFromDB(serviceId);
+        const vmDeployment = deploymentType === 'vm' ? await getVmDeploymentFromDB(serviceId) : null;
 
         // Build config object for generator
         const config = {
@@ -138,6 +145,9 @@ async function previewWorkflowController(req, res, next) {
             language,
             ecrRepoName,
             eksClusterName,
+            deploymentType,
+            vmInstanceId: vmDeployment ? vmDeployment.instanceId : null,
+            kindClusterName: vmDeployment ? vmDeployment.kindClusterName : null,
         };
 
 
@@ -230,4 +240,3 @@ module.exports = {
     pushWorkflowToGithub,
     pushSecrets,
 };
-

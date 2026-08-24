@@ -136,6 +136,7 @@ const generateK8sSchema = Joi.object({
   autoscaling: autoscalingSchema,
   // when true, render manifests and return them without touching Git
   dryRun: Joi.boolean().default(false),
+  githubTokenId: Joi.string().uuid().optional(),
 }).unknown(false);
 
 function validateGenerateK8sPayload(payload) {

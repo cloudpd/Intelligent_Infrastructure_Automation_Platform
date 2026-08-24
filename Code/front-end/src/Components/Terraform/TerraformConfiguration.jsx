@@ -266,6 +266,8 @@ export default function TerraformConfiguration() {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', ...authHeaders },
             body: JSON.stringify({
+              clusterName: eksForm.clusterName,
+              region: eksForm.region,
               clusterVersion: eksForm.clusterVersion,
               nodeGroups: eksForm.nodeGroups,
               clusterAdmins: eksForm.clusterAdmins.map((admin) => ({
@@ -281,15 +283,11 @@ export default function TerraformConfiguration() {
           });
           const updateData = await updateRes.json().catch(() => null);
           if (!updateRes.ok) throw new Error(updateData?.message || 'Could not update EKS cluster.');
-
-          // clusterName/region can never be changed via PATCH (see
-          // updateEksClusterSchema) — surface that clearly instead of
-          // silently ignoring the edit like before.
-          if (eksForm.region !== existingCluster.region || eksForm.clusterName !== existingCluster.cluster_name) {
-            setActionError(
-              "Cluster name and region can't be changed after creation — delete this cluster and create a new one to change those. Other changes were saved."
-            );
-          }
+          // clusterName/region are now updatable pre-apply (see
+          // eks.validation.js#updateEksClusterSchema). If the cluster has
+          // already been applied, the backend rejects the change with a
+          // 409 above, whose message surfaces via the catch block below —
+          // no need to compare against existingCluster here anymore.
         } else if (createRes.status !== 200 && createRes.status !== 201) {
           const createData = await createRes.json().catch(() => null);
           throw new Error(createData?.message || `Request failed with status ${createRes.status}`);
