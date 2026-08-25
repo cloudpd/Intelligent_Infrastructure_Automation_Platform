@@ -29,8 +29,8 @@ export const emptyEnvVar = () => ({ key: '', value: '', target: 'ConfigMap' });
 export const initialWizardState = (appDefaults = {}) => ({
   application: {
     name: appDefaults.name || '',
-    dockerImage: appDefaults.dockerImage || 'nginx',
-    imageTag: appDefaults.imageTag || 'latest',
+    dockerImage: appDefaults.dockerImage || '',
+    imageTag: appDefaults.imageTag || '',
     containerPort: appDefaults.containerPort || 8080,
     envVars: [],
   },

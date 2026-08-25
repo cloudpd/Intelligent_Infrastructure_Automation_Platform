@@ -2,7 +2,7 @@ import React from 'react';
 import { CUSTOM_RESOURCE_TYPES, SA_PRESETS, VERBS, PRESET_DESCRIPTIONS, emptyEnvVar } from './k8sConstants';
 
 // ---- Step 1 — Application -------------------------------------------------
-export function StepApplication({ wizard, setField, service }) {
+export function StepApplication({ wizard, setField, service, imageEditable, setImageEditable }) {
   const { application } = wizard;
 
   function updateEnvVar(index, patch) {
@@ -38,20 +38,47 @@ export function StepApplication({ wizard, setField, service }) {
 
       <div className='k8s-field-grid'>
         <label className='k8s-field'>
-          Docker image (read only)
-          <input type='text' value={application.dockerImage} readOnly disabled />
-          {/* <input type='text' value={application.dockerImage} /> */}
-
+          Docker image
+          <input
+            type='text'
+            value={application.dockerImage}
+            readOnly={!imageEditable}
+            disabled={!imageEditable}
+            onChange={(e) => setField('application', 'dockerImage', e.target.value)}
+            placeholder='e.g. username/my-app'
+          />
         </label>
         <label className='k8s-field'>
-          Image tag (read only)
-          <input type='text' value={application.imageTag} readOnly disabled />
+          Image tag
+          <input
+            type='text'
+            value={application.imageTag}
+            readOnly={!imageEditable}
+            disabled={!imageEditable}
+            onChange={(e) => setField('application', 'imageTag', e.target.value)}
+            placeholder='latest'
+          />
         </label>
         <label className='k8s-field'>
-          Container port (read only)
-          <input type='number' value={application.containerPort} readOnly disabled />
+          Container port
+          <input
+            type='number'
+            value={application.containerPort}
+            readOnly={!imageEditable}
+            disabled={!imageEditable}
+            onChange={(e) => setField('application', 'containerPort', Number(e.target.value))}
+          />
         </label>
       </div>
+
+      <label className='k8s-field k8s-field--checkbox'>
+        <input
+          type='checkbox'
+          checked={imageEditable}
+          onChange={(e) => setImageEditable(e.target.checked)}
+        />
+        Edit image name &amp; tag
+      </label>
 
       <div className='k8s-subsection'>
         <div className='k8s-subsection__header'>

@@ -35,6 +35,10 @@ const CIConfig = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    docker_username: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     enable_trivy: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

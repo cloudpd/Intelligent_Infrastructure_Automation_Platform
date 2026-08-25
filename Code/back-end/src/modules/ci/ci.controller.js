@@ -9,6 +9,36 @@ const {
     getDeploymentTypeFromDB,
     getVmDeploymentFromDB,
 } = require('./ci.service');
+const { TerraformState } = require('../infra/terraform-state/terraformState.model');
+const { Ecr } = require('../infra/ecr/ecr.model');
+
+/**
+ * Compute the full Docker image reference that CI will build and push,
+ * including the :latest tag. Used by both the GET and preview endpoints
+ * so the K8s wizard can pre-fill its image fields.
+ */
+async function buildComputedImage(ciConfig) {
+    const { registry, image_name, docker_username, service_id } = ciConfig;
+
+    if (registry === 'docker-hub') {
+        const user = docker_username || '${{ secrets.DOCKER_USERNAME }}';
+        return `${user}/${image_name}:latest`;
+    }
+
+    if (registry === 'aws-ecr') {
+        const state = await TerraformState.findOne({ where: { service_id } });
+        if (state && state.ecr_url) {
+            return `${state.ecr_url}:latest`;
+        }
+        const ecrRepo = await Ecr.findOne({ where: { service_id } });
+        if (ecrRepo && ecrRepo.name) {
+            return `${ecrRepo.name}:latest`;
+        }
+        return `${image_name}:latest`;
+    }
+
+    return `${image_name}:latest`;
+}
 
 async function getCIConfigController(req, res, next) {
     try {
@@ -25,6 +55,8 @@ async function getCIConfigController(req, res, next) {
             });
         }
 
+        const computedImage = await buildComputedImage(config);
+
         res.status(200).json({
             success: true,
             config: {
@@ -37,6 +69,7 @@ async function getCIConfigController(req, res, next) {
                 enableTests: config.enable_tests,
                 enableBuild: config.enable_build,
                 enableCD: config.enable_cd,
+                computedImage,
             },
         });
     } catch (err) {
@@ -153,6 +186,7 @@ async function previewWorkflowController(req, res, next) {
 
         const ciYaml = ciService.generateWorkflowYAML(config);
         const cdYaml = config.enableCD ? ciService.generateCdWorkflowYAML(config) : null;
+        const computedImage = await buildComputedImage(ciConfig);
 
         res.status(200).json({
             success: true,
@@ -162,6 +196,7 @@ async function previewWorkflowController(req, res, next) {
                 ciYaml,
                 cdYaml,
                 config,
+                computedImage,
                 filePath: ciService.CI_FILE_PATH || '.github/workflows/ci.yml',
                 cdFilePath: ciService.CD_FILE_PATH || '.github/workflows/cd.yml',
             },
@@ -218,13 +253,23 @@ async function pushWorkflowToGithub(req, res, next) {
 async function pushSecrets(req, res, next) {
     try {
         const { serviceId } = req.params;
-        const { secrets } = req.body || {};
+        const { registry, secrets } = req.body || {};
 
         const result = await githubService.pushRepoSecrets({
             userId: req.user.id,
             serviceId,
             secrets,
         });
+
+        // Persist the Docker Hub username so the K8s module can compute the
+        // full image reference (e.g. "myuser/myapp:latest") without needing
+        // the secret value at read time.
+        if (registry === 'docker' && secrets?.DOCKER_USERNAME) {
+            await CIConfig.update(
+                { docker_username: secrets.DOCKER_USERNAME },
+                { where: { service_id: serviceId } }
+            );
+        }
 
         res.status(200).json({ success: true, result });
     } catch (err) {

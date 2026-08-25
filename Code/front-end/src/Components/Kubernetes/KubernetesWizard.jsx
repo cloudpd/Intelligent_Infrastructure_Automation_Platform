@@ -49,6 +49,7 @@ export default function KubernetesWizard() {
   const [githubTokenId, setGithubTokenId] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitResult, setSubmitResult] = useState(null);
+  const [imageEditable, setImageEditable] = useState(false);
 
   const authHeaders = useMemo(() => {
     const token = localStorage.getItem('token');
@@ -121,6 +122,27 @@ export default function KubernetesWizard() {
         });
       })
       .catch(() => {}); // no saved config yet — fine, wizard stays at defaults
+
+    // Pre-fill image from CI config so the K8s wizard matches what CI will build.
+    fetch(`${API_URL}/services/${serviceId}/ci/get`, { headers: authHeaders })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.config?.computedImage) return;
+        const fullImage = data.config.computedImage;
+        const lastColon = fullImage.lastIndexOf(':');
+        const dockerImage = lastColon > -1 ? fullImage.substring(0, lastColon) : fullImage;
+        const imageTag = lastColon > -1 ? fullImage.substring(lastColon + 1) : 'latest';
+
+        setWizard((prev) => ({
+          ...prev,
+          application: {
+            ...prev.application,
+            dockerImage: prev.application.dockerImage || dockerImage,
+            imageTag: prev.application.imageTag || imageTag,
+          },
+        }));
+      })
+      .catch(() => {}); // no CI config yet — fine
 
     fetch(`${API_URL}/github/tokens`, { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : { tokens: [] }))
@@ -280,7 +302,7 @@ export default function KubernetesWizard() {
 
       <div className='k8s-wizard-layout'>
         <section className='k8s-wizard-card'>
-          <CurrentStep wizard={wizard} setField={setField} setNestedField={setNestedField} service={service} />
+          <CurrentStep wizard={wizard} setField={setField} setNestedField={setNestedField} service={service} imageEditable={imageEditable} setImageEditable={setImageEditable} />
 
           {isLastStep && githubTokens.length > 0 && (
             <div className='k8s-subsection'>
