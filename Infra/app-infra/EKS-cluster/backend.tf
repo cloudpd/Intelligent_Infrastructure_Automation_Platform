@@ -7,7 +7,7 @@ terraform {
     # key          = "prod/terraform.tfstate"
 
     region       = "eu-north-1"
-    # profile      = "hafez-aws"
+    profile      = "hafez-aws"
     use_lockfile = true #instead of dyanmodb_table cause use s3 to lock state file 
   }
 }
