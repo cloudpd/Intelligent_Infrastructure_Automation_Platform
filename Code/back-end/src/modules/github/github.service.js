@@ -209,8 +209,7 @@ module.exports = {
   pushFileToRepo,
   pushRepoSecrets,
   pushSingleRepoSecret,
-  // getPatTokenFromDb,
+  getPatTokenFromDb,
   getServiceById,
   getFileContent,
-  getPatToken,
 };

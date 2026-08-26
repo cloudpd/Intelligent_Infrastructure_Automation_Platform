@@ -15,9 +15,6 @@ export default function TerraformSetupWizard() {
   const [githubSecretStatus, setGithubSecretStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pushingGithubSecrets, setPushingGithubSecrets] = useState(false);
-  const [githubTokens, setGithubTokens] = useState([]);
-  const [loadingGithubTokens, setLoadingGithubTokens] = useState(true);
-  const [selectedGithubTokenId, setSelectedGithubTokenId] = useState('');
 
   // Step 1 — AWS Credentials
   const [credentials, setCredentials] = useState([]);
