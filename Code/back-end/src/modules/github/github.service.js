@@ -66,8 +66,15 @@ async function getServiceById(serviceId, userId) {
   return service;
 }
 
-async function getPatTokenFromDb(userId) {
-  const tokenRecord = await GithubToken.findOne({ where: { user_id: userId } });
+// async function getPatTokenFromDb(userId) {
+//   const tokenRecord = await GithubToken.findOne({ where: { user_id: userId } });
+//   if (!tokenRecord) throw new AppError('GitHub token not found', 404);
+//   return decrypt(tokenRecord.token);
+// }
+
+async function getPatToken(userId, tokenId) {
+  const where = tokenId ? { id: tokenId, user_id: userId } : { user_id: userId };
+  const tokenRecord = await GithubToken.findOne({ where });
   if (!tokenRecord) throw new AppError('GitHub token not found', 404);
   return decrypt(tokenRecord.token);
 }
@@ -118,14 +125,14 @@ async function pushSingleRepoSecret({ token, owner, repo, secretName, secretValu
   return { name: secretName, status: 'success' };
 }
 
-async function pushRepoSecrets({ userId, serviceId, secrets }) {
+async function pushRepoSecrets({ userId, serviceId, secrets, githubTokenId }) {
   if (!secrets || typeof secrets !== 'object' || Array.isArray(secrets) || Object.keys(secrets).length === 0) {
     throw new AppError('Secrets payload is required and must be a non-empty object', 400);
   }
 
   const service = await getServiceById(serviceId, userId);
   const { owner, repo } = parseRepoUrl(service.repository_url);
-  const token = await getPatTokenFromDb(userId);
+  const token = await getPatToken(userId, githubTokenId);
 
   const pushedSecrets = [];
   for (const [secretName, secretValue] of Object.entries(secrets)) {
@@ -198,7 +205,8 @@ module.exports = {
   pushFileToRepo,
   pushRepoSecrets,
   pushSingleRepoSecret,
-  getPatTokenFromDb,
+  // getPatTokenFromDb,
   getServiceById,
   getFileContent,
+  getPatToken,
 };

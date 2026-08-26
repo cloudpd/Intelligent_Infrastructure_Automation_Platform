@@ -12,6 +12,7 @@ const pushRepoSecretsSchema = Joi.object({
       'string.min': 'AWS Secret Access Key must be at least 16 characters',
       'string.max': 'AWS Secret Access Key must not exceed 256 characters',
     }),
+    githubTokenId: Joi.string().uuid().optional(),
   }).required(),
 }).required();
 

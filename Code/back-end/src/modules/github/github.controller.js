@@ -32,12 +32,13 @@ async function deleteTokenController(req, res, next) {
 async function pushRepoSecretsController(req, res, next) {
   try {
     const { serviceId } = req.params;
-    const { secrets } = req.body || {};
+    const { secrets, githubTokenId } = req.body || {};
 
     const result = await githubService.pushRepoSecrets({
       userId: req.user.id,
       serviceId,
       secrets,
+      githubTokenId,
     });
 
     res.status(200).json({ success: true, result });

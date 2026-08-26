@@ -26,6 +26,11 @@ export default function TerraformSetupWizard() {
   const [secretKey, setSecretKey] = useState('');
   const [savingCredential, setSavingCredential] = useState(false);
 
+  // Step 1 — GitHub token (used when pushing secrets to the repo)
+  const [githubTokens, setGithubTokens] = useState([]);
+  const [loadingGithubTokens, setLoadingGithubTokens] = useState(true);
+  const [selectedGithubTokenId, setSelectedGithubTokenId] = useState('');
+
   // Step 2 — Terraform backend
   const [s3Bucket, setS3Bucket] = useState('');
   const [lockTable, setLockTable] = useState('');
@@ -70,6 +75,27 @@ export default function TerraformSetupWizard() {
         setAddingNew(true);
       })
       .finally(() => setLoadingCredentials(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    setLoadingGithubTokens(true);
+    fetch(`${API_URL}/github/tokens`, { headers: authHeaders })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const list = data.tokens || [];
+        setGithubTokens(list);
+        if (list.length > 0) {
+          setSelectedGithubTokenId(list[0].id);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load GitHub tokens:', err);
+      })
+      .finally(() => setLoadingGithubTokens(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -238,11 +264,15 @@ export default function TerraformSetupWizard() {
         throw new Error('The selected AWS credential is missing keys and cannot be pushed.');
       }
 
+      if (!selectedGithubTokenId) {
+        throw new Error('Please select a GitHub token before pushing credentials to GitHub secrets.');
+      }
+
       setPushingGithubSecrets(true);
       const res = await fetch(`${API_URL}/github/${serviceId}/secrets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ secrets: credentialPayload }),
+        body: JSON.stringify({ secrets: credentialPayload, githubTokenId: selectedGithubTokenId }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -442,6 +472,28 @@ export default function TerraformSetupWizard() {
               </>
             )}
 
+            <label className='terraform-field-label' htmlFor='githubToken'>GitHub Token</label>
+            {loadingGithubTokens && <p className='projects-subtitle'>Loading your GitHub tokens...</p>}
+            {!loadingGithubTokens && githubTokens.length === 0 && (
+              <p className='projects-subtitle'>
+                No GitHub tokens found. <Link to='/github-tokens'>Add one</Link> before pushing secrets.
+              </p>
+            )}
+            {!loadingGithubTokens && githubTokens.length > 0 && (
+              <select
+                id='githubToken'
+                className='terraform-input'
+                value={selectedGithubTokenId}
+                onChange={(e) => setSelectedGithubTokenId(e.target.value)}
+              >
+                {githubTokens.map((tok) => (
+                  <option key={tok.id} value={tok.id}>
+                    {tok.name || tok.description || `Token #${tok.id}`}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {error && <p className='terraform-error'>{error}</p>}
             {githubSecretStatus && <p className='projects-subtitle' style={{ color: '#0f9d58' }}>{githubSecretStatus}</p>}
             <div className='terraform-actions'>
@@ -453,6 +505,7 @@ export default function TerraformSetupWizard() {
                   loadingCredentials ||
                   savingCredential ||
                   pushingGithubSecrets ||
+                  !selectedGithubTokenId ||
                   (!(selectedCredentialId && !addingNew) && !(accessKey.trim() && secretKey.trim()))
                 }
               >

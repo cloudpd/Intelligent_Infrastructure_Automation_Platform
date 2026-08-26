@@ -1,20 +1,3 @@
-/**
- * Generates the CD step(s) that deploy to a VM-hosted KIND cluster.
- *
- * Unlike EKS, the VM's KIND cluster has no network path reachable from the
- * GitHub Actions runner: the security group only opens the app's host_port
- * (see terraform/template/modules/vm/main.tf — "No SSH"), and the instance
- * only carries an SSM instance profile, not a public API endpoint. So the
- * runner cannot `kubectl apply` directly against it the way it can against
- * EKS.
- *
- * Instead this step ships the manifests already checked out under k8s/
- * (the same directory the EKS path applies via `kubectl apply -f k8s/`,
- * written by the k8s module) to the instance over AWS SSM, and runs
- * `kubectl apply` locally on the box against the kubeconfig `kind create
- * cluster` wrote out during provisioning (user_data.sh.tpl runs as root, so
- * the kubeconfig lives at /root/.kube/config).
- */
 class DeployVmGenerator {
   constructor(instanceId, kindClusterName) {
     this.instanceId = instanceId;
@@ -27,15 +10,19 @@ class DeployVmGenerator {
       : '${{ secrets.VM_INSTANCE_ID }}';
 
     // Commands executed on the VM itself via SSM's AWS-RunShellScript
-    // document. Kept as a JSON array literal so it can be embedded
-    // directly into the `aws ssm send-command --parameters` call.
     const remoteCommands = [
       'set -e',
       'mkdir -p /tmp/k8s-deploy',
-      'echo "$MANIFEST_B64" | base64 -d | tar -xzf - -C /tmp/k8s-deploy',
+      'cd /tmp/k8s-deploy', // FIX: Change into the directory so relative paths work
+      // FIX: Use GitHub Actions syntax to inject the environment variable into the single-quoted JSON string
+      'echo "${{ env.MANIFEST_B64 }}" | base64 -d | tar -xzf -', 
       'export KUBECONFIG=/root/.kube/config',
       `kubectl config use-context kind-${this.kindClusterName}`,
-      'kubectl apply -f /tmp/k8s-deploy/k8s',
+      // FIX: Broke these out into proper individual string commands (removed "run: `")
+      'kubectl apply -f k8s/namespace.yaml',
+      'kubectl apply -f k8s/limitrange.yaml',
+      'kubectl apply -f k8s/resourcequota.yaml',
+      'kubectl apply -f k8s/'
     ];
     const remoteCommandsJson = JSON.stringify(remoteCommands);
 
