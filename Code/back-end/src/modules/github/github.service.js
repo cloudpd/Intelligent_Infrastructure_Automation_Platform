@@ -66,17 +66,21 @@ async function getServiceById(serviceId, userId) {
   return service;
 }
 
-// async function getPatTokenFromDb(userId) {
-//   const tokenRecord = await GithubToken.findOne({ where: { user_id: userId } });
-//   if (!tokenRecord) throw new AppError('GitHub token not found', 404);
-//   return decrypt(tokenRecord.token);
-// }
+async function getPatTokenFromDb(userId, githubTokenId) {
+  if (githubTokenId) {
+    return getDecryptedToken(userId, githubTokenId);
+  }
 
-async function getPatToken(userId, tokenId) {
-  const where = tokenId ? { id: tokenId, user_id: userId } : { user_id: userId };
-  const tokenRecord = await GithubToken.findOne({ where });
-  if (!tokenRecord) throw new AppError('GitHub token not found', 404);
-  return decrypt(tokenRecord.token);
+  const tokens = await listUserTokens(userId);
+  if (!tokens.length) throw new AppError('GitHub token not found', 404);
+  if (tokens.length > 1) {
+    throw new AppError(
+      'You have multiple GitHub tokens saved. Pick which one to push with (githubTokenId).',
+      400
+    );
+  }
+
+  return getDecryptedToken(userId, tokens[0].id);
 }
 
 async function getRepoPublicKey(token, owner, repo) {
@@ -132,7 +136,7 @@ async function pushRepoSecrets({ userId, serviceId, secrets, githubTokenId }) {
 
   const service = await getServiceById(serviceId, userId);
   const { owner, repo } = parseRepoUrl(service.repository_url);
-  const token = await getPatToken(userId, githubTokenId);
+  const token = await getPatTokenFromDb(userId, githubTokenId);
 
   const pushedSecrets = [];
   for (const [secretName, secretValue] of Object.entries(secrets)) {

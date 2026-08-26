@@ -2,6 +2,7 @@ jest.mock('../github.service', () => ({
   saveToken: jest.fn(),
   listUserTokens: jest.fn(),
   deleteToken: jest.fn(),
+  pushRepoSecrets: jest.fn(),
 }));
 
 const githubService = require('../github.service');
@@ -9,6 +10,7 @@ const {
   addTokenController,
   listTokensController,
   deleteTokenController,
+  pushRepoSecretsController,
 } = require('../github.controller');
 
 function buildRes() {
@@ -115,6 +117,29 @@ describe('github.controller', () => {
 
       expect(next).toHaveBeenCalledWith(error);
       expect(res.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pushRepoSecretsController', () => {
+    it('forwards the selected GitHub token ID', async () => {
+      const req = {
+        user: { id: 'user-1' },
+        params: { serviceId: 'service-1' },
+        body: { githubTokenId: 'token-1', secrets: { AWS_ACCESS_KEY_ID: 'key' } },
+      };
+      const res = buildRes();
+      githubService.pushRepoSecrets.mockResolvedValue({ pushedSecrets: [] });
+
+      await pushRepoSecretsController(req, res, next);
+
+      expect(githubService.pushRepoSecrets).toHaveBeenCalledWith({
+        userId: 'user-1',
+        serviceId: 'service-1',
+        secrets: { AWS_ACCESS_KEY_ID: 'key' },
+        githubTokenId: 'token-1',
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(next).not.toHaveBeenCalled();
     });
   });
 });

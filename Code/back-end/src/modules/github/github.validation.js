@@ -1,6 +1,7 @@
 const Joi = require('joi');
 
 const pushRepoSecretsSchema = Joi.object({
+  githubTokenId: Joi.string().uuid().optional(),
   secrets: Joi.object({
     AWS_ACCESS_KEY_ID: Joi.string().trim().min(16).max(128).required().messages({
       'string.empty': 'AWS Access Key ID is required',

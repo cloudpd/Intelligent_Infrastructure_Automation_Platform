@@ -63,6 +63,9 @@ async function getFileSha(token, owner, repo, branch, filePath = CI_FILE_PATH) {
     }
   );
 
+  console.log('========================================');
+  console.log(`res.status for ${filePath}:`, res.status);
+
   if (res.status === 404) return null;
   if (!res.ok) throw new AppError(`Failed to get file: ${res.status}`, res.status);
 

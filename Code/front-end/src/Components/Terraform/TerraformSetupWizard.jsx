@@ -15,6 +15,9 @@ export default function TerraformSetupWizard() {
   const [githubSecretStatus, setGithubSecretStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pushingGithubSecrets, setPushingGithubSecrets] = useState(false);
+  const [githubTokens, setGithubTokens] = useState([]);
+  const [loadingGithubTokens, setLoadingGithubTokens] = useState(true);
+  const [selectedGithubTokenId, setSelectedGithubTokenId] = useState('');
 
   // Step 1 — AWS Credentials
   const [credentials, setCredentials] = useState([]);
@@ -79,16 +82,15 @@ export default function TerraformSetupWizard() {
   }, []);
 
   useEffect(() => {
-    setLoadingGithubTokens(true);
     fetch(`${API_URL}/github/tokens`, { headers: authHeaders })
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
         return res.json();
       })
       .then((data) => {
-        const list = data.tokens || [];
+        const list = Array.isArray(data) ? data : data.tokens || [];
         setGithubTokens(list);
-        if (list.length > 0) {
+        if (list.length === 1) {
           setSelectedGithubTokenId(list[0].id);
         }
       })
@@ -96,8 +98,7 @@ export default function TerraformSetupWizard() {
         console.error('Failed to load GitHub tokens:', err);
       })
       .finally(() => setLoadingGithubTokens(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authHeaders]);
 
   useEffect(() => {
     if (!serviceId) return;
@@ -224,6 +225,11 @@ export default function TerraformSetupWizard() {
     setError('');
     setGithubSecretStatus('');
 
+    if (!selectedGithubTokenId) {
+      setError('Please select a GitHub token before pushing credentials.');
+      return;
+    }
+
     let credentialPayload = null;
 
     try {
@@ -272,7 +278,7 @@ export default function TerraformSetupWizard() {
       const res = await fetch(`${API_URL}/github/${serviceId}/secrets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ secrets: credentialPayload, githubTokenId: selectedGithubTokenId }),
+        body: JSON.stringify({ githubTokenId: selectedGithubTokenId, secrets: credentialPayload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -408,21 +414,48 @@ export default function TerraformSetupWizard() {
             <h2 className='terraform-step-title'>AWS Credentials</h2>
             <p className='projects-subtitle'>Which AWS account should this service's infrastructure use?</p>
 
+            <label className='terraform-field-label' htmlFor='githubToken'>GitHub token for pushing secrets</label>
+            <select
+              id='githubToken'
+              className='terraform-input'
+              value={selectedGithubTokenId}
+              onChange={(e) => setSelectedGithubTokenId(e.target.value)}
+              disabled={loadingGithubTokens}
+            >
+              <option value=''>
+                {loadingGithubTokens ? 'Loading GitHub tokens...' : 'Select a GitHub token'}
+              </option>
+              {githubTokens.map((token) => (
+                <option key={token.id} value={token.id}>
+                  {token.name || 'Personal Access Token'}
+                  {token.description ? ` — ${token.description}` : ''}
+                </option>
+              ))}
+            </select>
+            {!loadingGithubTokens && githubTokens.length === 0 && (
+              <p className='terraform-readonly-row'>
+                No GitHub tokens saved. <Link to='/github-tokens'>Add a token first.</Link>
+              </p>
+            )}
+
             {loadingCredentials && <p className='projects-subtitle'>Loading your AWS accounts...</p>}
 
             {!loadingCredentials && credentials.length > 0 && !addingNew && (
               <>
-                {credentials.map((cred) => (
-                  <label className='terraform-radio' key={cred.id}>
-                    <input
-                      type='radio'
-                      name='awsCredential'
-                      checked={selectedCredentialId === cred.id}
-                      onChange={() => setSelectedCredentialId(cred.id)}
-                    />
-                    {cred.name || cred.access_key}
-                  </label>
-                ))}
+                <label className='terraform-field-label' htmlFor='awsCredential'>Saved AWS account</label>
+                <select
+                  id='awsCredential'
+                  className='terraform-input'
+                  value={selectedCredentialId}
+                  onChange={(e) => setSelectedCredentialId(e.target.value)}
+                >
+                  <option value=''>Select an AWS account</option>
+                  {credentials.map((cred) => (
+                    <option key={cred.id} value={cred.id}>
+                      {cred.name || cred.access_key}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type='button'
                   className='project-button project-button--ghost terraform-add-new-button'
@@ -503,6 +536,7 @@ export default function TerraformSetupWizard() {
                 onClick={handlePushCredentialsToGithub}
                 disabled={
                   loadingCredentials ||
+                  loadingGithubTokens ||
                   savingCredential ||
                   pushingGithubSecrets ||
                   !selectedGithubTokenId ||
