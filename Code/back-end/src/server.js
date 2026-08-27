@@ -20,7 +20,7 @@ async function start() {
 
     // Table sync handled by migrations or standard startup
     console.log('✅ Users table ready');
-    // await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: true });
     console.log('✅ Database models synced successfully');
 
     app.listen(PORT, () => {
