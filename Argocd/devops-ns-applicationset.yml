@@ -27,10 +27,10 @@ spec:
       destination:
         name: '{{cluster_name}}'
         namespace: 'devops-app'
-      # syncPolicy:
-      #   automated: 
-      #     selfHeal: true
-      #     prune: true
-      #   syncOptions:
-      #     - CreateNamespace=false
+      syncPolicy:
+        automated: 
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=false
           
