@@ -15,7 +15,7 @@ spec:
             cluster_name: in-cluster
             namespace: 'devops-app'
             branch: main
-            autosync: false
+            autosync: true
 
           # - name: staging-devops-app
           #   values_file: test-values.yml
