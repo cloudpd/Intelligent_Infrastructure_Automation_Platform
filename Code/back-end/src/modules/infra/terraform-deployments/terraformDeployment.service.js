@@ -9,6 +9,7 @@ const { TerraformDeployment } = require('./terraformDeployment.model');
 const { copyDir } = require('../terraform/utils/writeFiles');
 const { run } = require('../terraform/utils/execTerraform');
 const awsService = require('../../aws/aws.service');
+const terraformAiService = require('../terraform/terraform.ai.service');
 const vmService = require('../vm/vm.service');
 const eksService = require('../EKS/eks.service');
 
@@ -298,8 +299,9 @@ async function runDestroy(deployment, creds) {
 
     return { deploymentId };
   } catch (err) {
+    const simplified = await terraformAiService.simplifyTerraformError(err.message);
     await TerraformDeployment.update(
-      { status: 'destroy_failed', destroy_error: err.message },
+      { status: 'destroy_failed', destroy_error: simplified },
       { where: { id: deployment.id } }
     );
     throw err;

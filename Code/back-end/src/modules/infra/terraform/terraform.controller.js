@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const AppError = require('../../../core/utils/AppError');
 const terraformService = require('./terraform.service');
+const terraformAiService = require('./terraform.ai.service');
 const networkService = require('../network/network.service');
 const ecrService = require('../ecr/ecr.service');
 const eksService = require('../EKS/eks.service');
@@ -381,9 +382,10 @@ async function applyVmFiles(req, res, next) {
           publicIp: outputs.vm_public_ip?.value,
         });
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(`Terraform apply failed for VM ${vmId}:`, err.message);
-        return vmService.markFailed(vmId, err.message);
+        const simplified = await terraformAiService.simplifyTerraformError(err.message);
+        return vmService.markFailed(vmId, simplified);
       });
   } catch (err) {
     next(err);
@@ -448,9 +450,10 @@ async function applyEksFiles(req, res, next) {
           );
         }
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(`Terraform apply failed for EKS cluster ${clusterId}:`, err.message);
-        return eksService.markFailed(clusterId, err.message);
+        const simplified = await terraformAiService.simplifyTerraformError(err.message);
+        return eksService.markFailed(clusterId, simplified);
       });
   } catch (err) {
     next(err); 

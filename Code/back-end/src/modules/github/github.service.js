@@ -200,6 +200,84 @@ async function getFileContent({ accessToken, owner, repo, path, branch }) {
   return Buffer.from(data.content, 'base64').toString('utf8');
 }
 
+// Directories that should never be pushed to GitHub / read into memory —
+// .terraform holds downloaded provider binaries which can be hundreds of MB.
+const IGNORED_DIRS = new Set(['.terraform', '.git', 'node_modules']);
+// Only these extensions are considered actual Terraform "source" files.
+const ALLOWED_EXTENSIONS = new Set(['.tf', '.tfvars', '.tf.json', '.hcl']);
+// Safety net: never try to read a single file bigger than this into memory as a string.
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+function readFilesRecursive(dir, basePath = '') {
+  const fs = require('fs');
+  const path = require('path');
+  const results = [];
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (IGNORED_DIRS.has(entry.name)) continue;
+
+    const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      results.push(...readFilesRecursive(fullPath, relativePath));
+    } else {
+      const ext = path.extname(entry.name);
+      if (!ALLOWED_EXTENSIONS.has(ext) && entry.name !== '.terraform.lock.hcl') continue;
+
+      const { size } = fs.statSync(fullPath);
+      if (size > MAX_FILE_SIZE_BYTES) {
+        // Skip unexpectedly huge files instead of crashing the whole push.
+        continue;
+      }
+
+      results.push({ path: relativePath, content: fs.readFileSync(fullPath, 'utf8') });
+    }
+  }
+
+  return results;
+}
+
+async function pushTerraformFiles({ userId, serviceId, githubTokenId, branch }) {
+  const service = await getServiceById(serviceId, userId);
+  const { owner, repo } = parseRepoUrl(service.repository_url);
+  const token = await getPatTokenFromDb(userId, githubTokenId);
+  const targetBranch = branch || service.branch || 'main';
+
+  const generatedDir = require('path').join(process.cwd(), 'generated');
+  const tfDir = require('path').join(generatedDir, serviceId, 'dev');
+
+  const fs = require('fs');
+  if (!fs.existsSync(tfDir)) {
+    throw new AppError('No generated Terraform files found — run Generate first', 422);
+  }
+
+  const files = readFilesRecursive(tfDir);
+  if (files.length === 0) {
+    throw new AppError('Generated Terraform directory is empty', 422);
+  }
+
+  const pushedFiles = [];
+  for (const file of files) {
+    try {
+      await pushFileToRepo({
+        accessToken: token,
+        owner,
+        repo,
+        path: `terraform/${file.path}`,
+        content: file.content,
+        branch: targetBranch,
+        commitMessage: `Add terraform/${file.path} via DeployHub`,
+      });
+      pushedFiles.push({ path: `terraform/${file.path}`, status: 'success' });
+    } catch (err) {
+      pushedFiles.push({ path: `terraform/${file.path}`, status: 'failed', error: err.message });
+    }
+  }
+
+  return { pushedFiles, repoFullName: `${owner}/${repo}` };
+}
+
 module.exports = {
   saveToken,
   listUserTokens,
@@ -212,4 +290,6 @@ module.exports = {
   getPatTokenFromDb,
   getServiceById,
   getFileContent,
+  pushTerraformFiles,
+  // getPatToken,
 };

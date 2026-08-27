@@ -17,6 +17,15 @@ const pushRepoSecretsSchema = Joi.object({
   }).required(),
 }).required();
 
+const pushTerraformFilesSchema = Joi.object({
+  githubTokenId: Joi.string().uuid().required().messages({
+    'any.required': 'A GitHub token is required to push files',
+    'string.uuid': 'Invalid GitHub token ID',
+  }),
+  branch: Joi.string().optional().default('main'),
+}).required();
+
 module.exports = {
   pushRepoSecretsSchema,
+  pushTerraformFilesSchema,
 };

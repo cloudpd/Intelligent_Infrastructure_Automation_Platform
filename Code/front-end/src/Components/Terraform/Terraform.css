@@ -458,3 +458,29 @@
   padding: 6px 12px;
   font-size: 0.9em;
 }
+
+/* ---- Push to GitHub section ---- */
+.terraform-push-github {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color-strong);
+  background: var(--bg-surface-soft);
+}
+
+.terraform-push-github__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.terraform-push-github__select-wrap {
+  flex: 1;
+  min-width: 200px;
+}
+
+.project-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

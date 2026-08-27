@@ -69,6 +69,11 @@ export default function TerraformConfiguration() {
   });
   const [eksCreating, setEksCreating] = useState(false);
 
+  const [githubTokens, setGithubTokens] = useState([]);
+  const [loadingGithubTokens, setLoadingGithubTokens] = useState(true);
+  const [selectedGithubTokenId, setSelectedGithubTokenId] = useState('');
+  const [pushingToGithub, setPushingToGithub] = useState(false);
+
   const authHeaders = useMemo(() => {
     const token = localStorage.getItem('token');
     return { Authorization: `Bearer ${token}` };
@@ -99,6 +104,18 @@ export default function TerraformConfiguration() {
     fetchState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId]);
+
+  useEffect(() => {
+    setLoadingGithubTokens(true);
+    fetch(`${API_URL}/github/tokens`, { headers: authHeaders })
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data.tokens || [];
+        setGithubTokens(list);
+      })
+      .catch(() => setGithubTokens([]))
+      .finally(() => setLoadingGithubTokens(false));
+  }, [authHeaders]);
 
   async function handleSaveDeployment(type) {
     setDeploymentType(type);
@@ -522,6 +539,33 @@ export default function TerraformConfiguration() {
     }
   }
 
+  async function handlePushToGithub() {
+    setPushingToGithub(true);
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await fetch(`${API_URL}/github/${serviceId}/push-terraform-files`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ githubTokenId: selectedGithubTokenId, branch: 'main' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || `Request failed with status ${res.status}`);
+
+      const { pushedFiles, repoFullName } = data.result || {};
+      const failed = (pushedFiles || []).filter((f) => f.status === 'failed');
+      if (failed.length > 0) {
+        setActionError(`Pushed to ${repoFullName} but ${failed.length} file(s) failed: ${failed.map((f) => f.path).join(', ')}`);
+      } else {
+        setActionSuccess(`Terraform files pushed to ${repoFullName} successfully.`);
+      }
+    } catch (err) {
+      setActionError(err.message || 'Could not push files to GitHub.');
+    } finally {
+      setPushingToGithub(false);
+    }
+  }
+
   const setupComplete = Boolean(state?.s3Bucket) && Boolean(deploymentType);
 
   return (
@@ -602,6 +646,12 @@ export default function TerraformConfiguration() {
             actionSuccess={actionSuccess}
             onGenerate={handleGenerate}
             onApply={handleApply}
+            githubTokens={githubTokens}
+            loadingGithubTokens={loadingGithubTokens}
+            selectedGithubTokenId={selectedGithubTokenId}
+            setSelectedGithubTokenId={setSelectedGithubTokenId}
+            onPushToGithub={handlePushToGithub}
+            pushingToGithub={pushingToGithub}
           />
 
           {/* Next-step CTA after successful apply */}

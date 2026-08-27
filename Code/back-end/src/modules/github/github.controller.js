@@ -47,9 +47,28 @@ async function pushRepoSecretsController(req, res, next) {
   }
 }
 
+async function pushTerraformFilesController(req, res, next) {
+  try {
+    const { serviceId } = req.params;
+    const { githubTokenId, branch } = req.body;
+
+    const result = await githubService.pushTerraformFiles({
+      userId: req.user.id,
+      serviceId,
+      githubTokenId,
+      branch,
+    });
+
+    res.status(200).json({ success: true, result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   addTokenController,
   listTokensController,
   deleteTokenController,
   pushRepoSecretsController,
+  pushTerraformFilesController,
 };
