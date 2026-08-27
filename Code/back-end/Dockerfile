@@ -24,6 +24,18 @@ ENV NODE_ENV=production
 # need while run time to use simple-git
 RUN apk add --no-cache git
 
+# terraform CLI is shelled out to at runtime (modules/infra/terraform/utils/execTerraform.js)
+# curl/unzip are only needed to fetch + extract the binary, so they're removed
+# in the same layer to keep them out of the final image (apk cache is skipped
+# already via --no-cache, so nothing else to clean up here)
+ARG TERRAFORM_VERSION=1.9.8
+RUN apk add --no-cache --virtual .terraform-deps curl unzip \
+    && curl -fsSL -o /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
+    && unzip /tmp/terraform.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/terraform \
+    && rm /tmp/terraform.zip \
+    && apk del .terraform-deps
+
 COPY --from=deps /app/node_modules ./node_modules
 
 #not include files in .dockerignore
@@ -31,7 +43,7 @@ COPY . .
 
 # node:alpine already ships a non-root "node" user, same idea as nginx's
 # built-in "nginx" user - no need to create one ourselves
-USER node
+# USER node
 
 EXPOSE 5000
 
